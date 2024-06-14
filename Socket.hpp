@@ -5,8 +5,9 @@ class Socket {
 		Socket(std::string IPAddress, int portNumber);
 		~Socket();
 		
-		void	startListen();
-		void	log(std::string const & msg) const;
+		void		startListen();
+		void		log(std::string const & msg) const;
+		int const &	getFd() const;
 	private:
 		Socket();
 

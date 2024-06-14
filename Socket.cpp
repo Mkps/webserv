@@ -47,6 +47,10 @@ Socket::~Socket()
 		close(_socket);
 }
 
+int const & Socket::getFd() const
+{
+	return _socket;
+}
 void	Socket::log(std::string const & msg) const
 {
 	std::cout << msg << std::endl;
