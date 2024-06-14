@@ -1,9 +1,12 @@
 #include "Socket.hpp"
+#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
+#include <fstream>
+#include <string>
 
 Socket::Socket(std::string IPAddress, int portNumber)
 {
@@ -24,7 +27,18 @@ Socket::Socket(std::string IPAddress, int portNumber)
 	int clientSocket = accept(_socket, NULL, NULL);
 	char buf[1024] = {0};
 	recv(clientSocket, buf, sizeof(buf), 0);
-	std::cout << "message from client --- " <<  buf << " ---" << std::endl;
+	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
+	std::ifstream file("resources/simple.html");
+	std::string line;
+	std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
+	send(clientSocket, msg.c_str(), strlen(msg.c_str()), 0);
+	int calc = 0;
+	while (getline(file, line)) {
+		send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
+		calc += strlen(line.c_str());
+	}
+	std::cerr << "content length " << calc << std::endl;
+	file.close();
 }
 
 Socket::~Socket()
