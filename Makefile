@@ -20,7 +20,9 @@ OBJ_DIR = build/
 
 SRC_FILES = main.cpp \
 			Socket.cpp \
-			Server.cpp
+			Server.cpp \
+			Request.cpp \
+			RequestLine.cpp 
 
 SRC = $(addprefix $(SRC_DIR), $(SRC_FILES))
 
