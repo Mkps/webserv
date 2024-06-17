@@ -20,6 +20,7 @@ class Request {
 		hashmap			_requestHeaders;
 		Request();
 		void			retrieveHeaders(std::string const & request);
+		void			fetchHeaders(std::string const & request);
 	public:
 		Request(std::string const &request);
 		~Request();

@@ -14,9 +14,18 @@
 
 #include <iostream>
 
-void	Request::retrieveHeaders(std::string const & request)
+void	Request::fetchHeaders(std::string const & request)
 {
+	int i = 0;
+	while (request[i] && request[i + 1] && request[i] != '\r' && request[i + 1] != '\n')
+		i++;
+	while (request[i] && request[i + 1] && request[i] != '\r' && request[i + 1] != '\n') {
+		while (request[i] && request[i] != ':' && request[i] != '\n')	i++;
+		_requestHeaders= request.substr(
+	}
+
 }
+
 Request::Request(std::string const &request)
 	: _requestLine(request)
 {
@@ -24,6 +33,7 @@ Request::Request(std::string const &request)
 		std::cerr << "invalid method" << std::endl;
 	else
 		std::cout << "method ok" << std::endl;
+	fetchHeaders(request);
 }
 
 Request::~Request()
