@@ -21,6 +21,7 @@
 #include <fstream>
 #include <string>
 #include "Request.hpp"
+#include "Response.hpp"
 
 Socket::Socket(std::string IPAddress, int portNumber)
 {
@@ -51,14 +52,16 @@ Socket::Socket(std::string IPAddress, int portNumber)
 	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	Request rq(buf);
 	std::cout << "method extracted " << rq.getRequestLine().getMethod() << std::endl;
-	std::ifstream file("resources/simple.html");
-	std::string line;
-	std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
+	//std::ifstream file("resources/simple.html");
+	//std::string line;
+	//std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
+	Response r;
+	std::string msg = r.getResponseMsg();
 	send(clientSocket, msg.c_str(), strlen(msg.c_str()), 0);
-	while (getline(file, line)) {
-		send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
-	}
-	file.close();
+	//while (getline(file, line)) {
+	//	send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
+	//}
+	//file.close();
 }
 
 Socket::~Socket()
