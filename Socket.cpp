@@ -48,9 +48,9 @@ Socket::Socket(std::string IPAddress, int portNumber)
 	int clientSocket = accept(_socket, NULL, NULL);
 	char buf[1024] = {0};
 	recv(clientSocket, buf, sizeof(buf), 0);
+	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	Request rq(buf);
 	std::cout << "method extracted " << rq.getRequestLine().getMethod() << std::endl;
-	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	std::ifstream file("resources/simple.html");
 	std::string line;
 	std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");

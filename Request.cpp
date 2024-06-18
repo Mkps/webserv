@@ -13,17 +13,34 @@
 #include "Request.hpp"
 
 #include <iostream>
+#include <sstream>
+
+inline void trim(std::string &s) {
+	size_t first = s.find_first_not_of(' ');
+	size_t last = s.find_last_not_of(' ');
+	s = s.substr(first, last - first + 1);
+}
+
+// trim from both ends (copying)
+inline std::string trim_copy(std::string s) {
+    trim(s);
+    return s;
+}
 
 void	Request::fetchHeaders(std::string const & request)
 {
-	int i = 0;
-	while (request[i] && request[i + 1] && request[i] != '\r' && request[i + 1] != '\n')
-		i++;
-	while (request[i] && request[i + 1] && request[i] != '\r' && request[i + 1] != '\n') {
-		while (request[i] && request[i] != ':' && request[i] != '\n')	i++;
-		_requestHeaders= request.substr(
-	}
-
+	std::istringstream req(request);
+	std::string header;
+	std::string::size_type index;
+	while (std::getline(req, header) && header[0] != '\r') {
+    index = header.find(':', 0);
+    if(index != std::string::npos) {
+    	_requestHeaders.insert(std::make_pair(
+        trim_copy(header.substr(0, index)), 
+        trim_copy(header.substr(index + 1))
+      ));
+    }
+  }
 }
 
 Request::Request(std::string const &request)
