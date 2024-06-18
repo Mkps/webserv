@@ -23,9 +23,8 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
-Socket::Socket(std::string IPAddress, int portNumber)
+void	Socket::initSocket(int portNumber)
 {
-	(void)IPAddress;
 	_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (_socket < 0) {
 		//throw SocketCreationException();
@@ -45,23 +44,35 @@ Socket::Socket(std::string IPAddress, int portNumber)
 		perror("Error: ");
 		std::cerr << "Error creating socket" << std::endl;
 	}
+}
+Socket::Socket(std::string IPAddress, int portNumber)
+{
+	(void)IPAddress;
+	initSocket(portNumber);
 	startListen();
 	int clientSocket = accept(_socket, NULL, NULL);
 	char buf[1024] = {0};
 	recv(clientSocket, buf, sizeof(buf), 0);
 	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	Request rq(buf);
-	std::cout << "method extracted " << rq.getRequestLine().getMethod() << std::endl;
-	//std::ifstream file("resources/simple.html");
-	//std::string line;
+	std::ostringstream s;
+	s << "resources" << rq.getFilePath();
+	s << "simple.html";
+	std::cout << "nice " << s.str() << std::endl;
+	std::ifstream file(s.str().c_str());
+	std::string line;
 	//std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
 	Response r;
-	std::string msg = r.getResponseMsg();
+	r.setStatusCode(200);
+	r.setHeader("content-length", "94");
+	r.setHeader("content-type", "text/html");
+	std::string msg = r.writeHeader();
+	std::cout << msg << std::endl;
 	send(clientSocket, msg.c_str(), strlen(msg.c_str()), 0);
-	//while (getline(file, line)) {
-	//	send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
-	//}
-	//file.close();
+	while (getline(file, line)) {
+		send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
+	}
+	file.close();
 }
 
 Socket::~Socket()

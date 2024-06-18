@@ -15,19 +15,25 @@
 
 #include <netinet/in.h>
 #include <string>
+#include "Request.hpp"
+#include "Response.hpp"
 class Socket {
 	public:
 		Socket(std::string IPAddress, int portNumber);
 		~Socket();
 		
-		void		startListen();
 		void		log(std::string const & msg) const;
 		int const &	getFd() const;
 	private:
 		Socket();
+		void		startListen();
+		void		sendResponse();
+		void		initSocket(int portNumber);
 
 		int			_socket;
 		sockaddr_in _socketAddr;
+		Request		_request;
+		Response	_response;
 
 };
 #endif
