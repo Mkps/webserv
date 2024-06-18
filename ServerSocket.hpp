@@ -31,6 +31,5 @@ class ServerSocket {
 		int			_socket;
 		sockaddr_in _socketAddr;
 		ClientSocket* clientArray;
-
 };
 #endif
