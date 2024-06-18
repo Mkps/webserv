@@ -11,26 +11,29 @@
 /* ************************************************************************** */
 
 #ifndef REQUEST_HPP
-# define REQUEST_HPP
+#define REQUEST_HPP
 #include "RequestLine.hpp"
 #include <map>
 
 typedef std::map<std::string, std::string> hashmap;
 class Request {
-	private:
-		RequestLine		_requestLine;
-		hashmap			_requestHeaders;
-		Request();
-		void			retrieveHeaders(std::string const & request);
-		void			fetchHeaders(std::string const & request);
-	public:
-		Request(std::string const &request);
-		~Request();
-		Request(Request const &src);
-		Request& operator= (Request const &rhs);
+private:
+  RequestLine _requestLine;
+  hashmap _requestHeaders;
+  void retrieveHeaders(std::string const &request);
+  void fetchHeaders(std::string const &request);
 
-		Request const		&getRequest() const;
-		RequestLine const	&getRequestLine() const;
-		hashmap	const		&getRequestHeaders() const;
+public:
+  Request();
+  Request(std::string const &request);
+  ~Request();
+  Request(Request const &src);
+  Request &operator=(Request const &rhs);
+
+  std::string			getFilePath() const;
+  void 					setRequest(std::string const &request);
+  Request const 		&getRequest() const;
+  RequestLine const		&getRequestLine() const;
+  hashmap const			&getRequestHeaders() const;
 };
 #endif
