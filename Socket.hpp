@@ -10,6 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#ifndef SOCKET_HPP
+# define SOCKET_HPP
+
 #include <netinet/in.h>
 #include <string>
 class Socket {
@@ -27,3 +30,4 @@ class Socket {
 		sockaddr_in _socketAddr;
 
 };
+#endif

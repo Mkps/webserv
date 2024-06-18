@@ -10,12 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#ifndef SERVERSOCKET_HPP
+# define SERVERSOCKET_HPP
+
 #include <netinet/in.h>
 #include <string>
 
-#include "ASocket.hpp"
 class ClientSocket;
-class ServerSocket : public ASocket{
+class ServerSocket {
 	public:
 		ServerSocket(std::string IPAddress, int portNumber);
 		~ServerSocket();
@@ -31,3 +33,4 @@ class ServerSocket : public ASocket{
 		ClientSocket* clientArray;
 
 };
+#endif

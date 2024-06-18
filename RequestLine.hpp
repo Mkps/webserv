@@ -1,3 +1,5 @@
+#ifndef REQUESTLINE_HPP
+# define REQUESTLINE_HPP
 #include <string>
 
 class RequestLine{
@@ -22,3 +24,4 @@ class RequestLine{
 
 		bool				isRequestLineValid();
 };
+#endif

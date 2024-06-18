@@ -10,6 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#ifndef REQUEST_HPP
+# define REQUEST_HPP
 #include "RequestLine.hpp"
 #include <map>
 
@@ -31,4 +33,4 @@ class Request {
 		RequestLine const	&getRequestLine() const;
 		hashmap	const		&getRequestHeaders() const;
 };
-
+#endif
