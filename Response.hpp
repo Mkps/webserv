@@ -37,11 +37,12 @@ class Response {
 
 		std::string			getResponseMsg();
 		void				setBodyError();
+		void				setBody(std::string const & filename);
 		hashmap const &		getHeader() const;
 		std::string const &	getHeaderValue(std::string const & key) const;
 		void				setHeader(std::string const & key, std::string const & value);
 
 		std::string			writeHeader();
-		void				send() const;
+		void				sendResponse(int clientSocket);
 };
 #endif

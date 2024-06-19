@@ -12,8 +12,12 @@
 
 #include "Response.hpp"
 #include "Request.hpp"
+#include <cstring>
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <sys/socket.h>
+
 Response::Response() {
   _statusCode = 400;
   _body = "<!DOCTYPE "
@@ -82,11 +86,24 @@ inline std::string getResponse(short status) {
   } else
     return "Bad Request";
 }
-std::string Response::writeHeader() {
+
+void	Response::setBody(std::string const & filename)
+{
+
+	std::ifstream file(filename.c_str());
+	std::ostringstream s;
+	std::string line;
+	while (getline(file, line)) {
+		s << line;
+	}
+	_body = s.str();
+	file.close();
+}
+
+std::string Response::writeHeader() 
+{
   std::ostringstream s;
   s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\n";
-  if (_statusCode != 200)
-    setBodyError();
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
     s << it->first << " : " << it->second << ",\n";
@@ -94,4 +111,13 @@ std::string Response::writeHeader() {
   return s.str();
 }
 
-void Response::send() const {}
+inline void	sendStr(int clientSocket, std::string const & str)
+{
+	send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
+}
+void Response::sendResponse(int clientSocket) 
+{
+	sendStr(clientSocket, writeHeader());
+	sendStr(clientSocket, _body);
+}
+
