@@ -6,7 +6,7 @@
 /*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/18 15:30:25 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/18 15:30:26 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/19 17:49:57 by aloubier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,7 +107,7 @@ std::string Response::writeHeader()
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
     s << it->first << " : " << it->second << ",\n";
-  s << "\n";
+  s << "\r\n";
   return s.str();
 }
 
