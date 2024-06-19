@@ -12,9 +12,9 @@
 
 NAME = ./webserv
 
-SRC_DIR = ./
+SRC_DIR = ./src/
 
-INC_DIR = ./
+INC_DIR = ./include/
 
 OBJ_DIR = build/
 
