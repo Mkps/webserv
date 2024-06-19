@@ -16,9 +16,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <cstdio>
 #include <sstream>
 #include <unistd.h>
-#include <fstream>
 #include <string>
 #include "Request.hpp"
 #include "Response.hpp"
@@ -45,6 +45,7 @@ void	Socket::initSocket(int portNumber)
 		std::cerr << "Error creating socket" << std::endl;
 	}
 }
+
 Socket::Socket(std::string IPAddress, int portNumber)
 {
 	(void)IPAddress;
@@ -55,24 +56,19 @@ Socket::Socket(std::string IPAddress, int portNumber)
 	recv(clientSocket, buf, sizeof(buf), 0);
 	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	Request rq(buf);
+	// Will need to make a function to find the correct path from host + uri
 	std::ostringstream s;
 	s << "resources" << rq.getFilePath();
 	s << "simple.html";
-	std::cout << "nice " << s.str() << std::endl;
-	std::ifstream file(s.str().c_str());
-	std::string line;
 	//std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
 	Response r;
 	r.setStatusCode(200);
 	r.setHeader("content-length", "94");
 	r.setHeader("content-type", "text/html");
-	std::string msg = r.writeHeader();
-	std::cout << msg << std::endl;
-	send(clientSocket, msg.c_str(), strlen(msg.c_str()), 0);
-	while (getline(file, line)) {
-		send(clientSocket, line.c_str(), strlen(line.c_str()), 0);
-	}
-	file.close();
+	std::string filename = s.str();
+	r.setBody(filename);
+	//std::string msg = r.writeHeader();
+	r.sendResponse(clientSocket);
 }
 
 Socket::~Socket()
@@ -85,6 +81,7 @@ int const & Socket::getFd() const
 {
 	return _socket;
 }
+
 void	Socket::log(std::string const & msg) const
 {
 	std::cout << msg << std::endl;

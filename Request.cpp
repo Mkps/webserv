@@ -58,8 +58,6 @@ void	Request::setRequest(std::string const & request)
 	_requestLine = req;
 	if (_requestLine.isRequestLineValid() == false)
 		std::cerr << "invalid method" << std::endl;
-	else
-		std::cout << "method ok" << std::endl;
 	fetchHeaders(request);
 }
 
@@ -68,8 +66,6 @@ Request::Request(std::string const &request)
 {
 	if (_requestLine.isRequestLineValid() == false)
 		std::cerr << "invalid method" << std::endl;
-	else
-		std::cout << "method ok" << std::endl;
 	fetchHeaders(request);
 }
 
