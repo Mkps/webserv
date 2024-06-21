@@ -22,6 +22,7 @@ private:
   hashmap		_requestHeaders;
   void			retrieveHeaders(std::string const &request);
   void			fetchHeaders(std::string const &request);
+  int			initData(); // will eventually be taken over by Server->conf
 
 public:
   Request();
@@ -30,6 +31,7 @@ public:
   Request(Request const &src);
   Request &operator=(Request const &rhs);
 
+  int					validateRequest() const;
   std::string			getFilePath() const;
   void 					setRequest(std::string const &request);
   Request const 		&getRequest() const;
