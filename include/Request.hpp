@@ -18,10 +18,10 @@
 typedef std::map<std::string, std::string> hashmap;
 class Request {
 private:
-  RequestLine _requestLine;
-  hashmap _requestHeaders;
-  void retrieveHeaders(std::string const &request);
-  void fetchHeaders(std::string const &request);
+  RequestLine 	_requestLine;
+  hashmap		_requestHeaders;
+  void			retrieveHeaders(std::string const &request);
+  void			fetchHeaders(std::string const &request);
 
 public:
   Request();

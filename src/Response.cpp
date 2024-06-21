@@ -51,23 +51,6 @@ std::string const &Response::getHeaderValue(std::string const &key) const {
   return _responseHeaders.find(key)->second;
 }
 
-void Response::setBodyError() {
-
-  std::ostringstream s;
-  s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
-    << "</h1>\n<p>Error</p></body>\n</html>\r\n";
-  _body = s.str();
-}
-
-std::string Response::getResponseMsg() {
-  std::ostringstream s;
-  s << "HTTP/1.1 " << _statusCode << " KO\n" << writeHeader() << "\n\n";
-  if (_statusCode != 200)
-    setBodyError();
-  s << _body;
-  return s.str();
-}
-
 void Response::setHeader(std::string const &key, std::string const &value) {
   _responseHeaders[key] = value;
 }
@@ -80,11 +63,33 @@ inline std::string getResponse(short status) {
   } else if (status >= 300 && status < 400) {
     return "Redirection";
   } else if (status >= 400 && status < 500) {
-    return "Client Error";
+	  if (status == 404)
+		  return "File Not Found";
+	  else if (status == 403)
+		  return "Forbidden";
+	  else
+    	return "Client Error";
   } else if (status >= 500 && status < 600) {
     return "Server Error";
   } else
     return "Bad Request";
+}
+
+void Response::setBodyError() {
+
+  std::ostringstream s;
+  s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
+    << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
+  _body = s.str();
+}
+
+std::string Response::getResponseMsg() {
+  std::ostringstream s;
+  s << "HTTP/1.1 " << _statusCode << " KO\n" << writeHeader() << "\n\n";
+  if (_statusCode != 200)
+    setBodyError();
+  s << _body;
+  return s.str();
 }
 
 void	Response::setBody(std::string const & filename)

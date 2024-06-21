@@ -20,8 +20,119 @@
 #include <sstream>
 #include <unistd.h>
 #include <string>
+#include <vector>
 #include "Request.hpp"
 #include "Response.hpp"
+
+Socket::Socket(std::string IPAddress, int portNumber)
+{
+	(void)IPAddress;
+	initSocket(portNumber);
+	startListen();
+	int clientSocket = accept(_socket, NULL, NULL);
+	char buf[1024] = {0};
+	recv(clientSocket, buf, sizeof(buf), 0);
+	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
+	Request rq(buf);
+	Response r;
+	processRequest(rq, r);
+	r.sendResponse(clientSocket);
+}
+
+Socket::~Socket()
+{
+	if (_socket >= 0)
+		close(_socket);
+}
+
+int const & Socket::getFd() const
+{
+	return _socket;
+}
+
+void	Socket::log(std::string const & msg) const
+{
+	std::cout << msg << std::endl;
+}
+
+void Socket::startListen()
+{
+    if (listen(_socket, 20) < 0) {
+		std::cerr << "Socket listen failed" << std::endl;
+    }    std::ostringstream ss;
+    ss << "\n*** Listening on ADDRESS: localhost" 
+        << " PORT: " << ntohs(_socketAddr.sin_port) 
+        << " ***\n\n";
+    log(ss.str());
+}
+#include <sys/stat.h>
+inline int fileExists(const std::string & name) {
+	struct stat buf;
+	if (stat( name.c_str(), &buf) == 0)
+	{
+		std::cout << "st size " << buf.st_size << std::endl;
+		return buf.st_size;
+	}
+	else
+		return -1;
+}
+
+template <typename T>
+std::string NumberToString ( T Number )
+{
+	std::ostringstream ss;
+	ss << Number;
+	return ss.str();
+}
+
+void	Socket::processRequest(Request const & req, Response & resp)
+{
+	int tmp;
+	std::string myStr[] = {"index", "index.html"};
+	std::vector<std::string>tryFiles;
+	std::string root = ".";
+	std::string path = root + req.getFilePath();
+	tryFiles.assign(myStr, myStr + 2);
+	if (!req.getFilePath().empty()  && req.getFilePath()[req.getFilePath().size() - 1] == '/')
+	{
+		for (std::vector<std::string>::const_iterator it = tryFiles.begin(); it != tryFiles.end(); ++it) {
+			std::string filePath(path + *it);
+			std::cout << "file path is " << filePath << std::endl;
+			if ((tmp = fileExists(filePath)) == -1) {
+				resp.setStatusCode(400);
+				resp.setHeader("content-length", "24");
+				resp.setHeader("content-type", "text/html");
+				resp.setBodyError();
+			}
+			else {
+				resp.setStatusCode(200);
+				break;
+			}
+		}
+	}
+	else {
+			std::cout << "file path is " << path << std::endl;
+			if ((tmp = fileExists(path)) == -1) {
+				resp.setStatusCode(404);
+				resp.setHeader("content-length", "24");
+				resp.setHeader("content-type", "text/html");
+				resp.setBodyError();
+			}
+			else {
+				resp.setStatusCode(200);
+			}
+	}
+	if (resp.getStatusCode() != 200) {
+		std::cerr << "couldnt find file" << std::endl;
+		return;
+	}
+	resp.setStatusCode(200);
+	std::string bodySize = NumberToString<int>(tmp);
+	std::cout << bodySize << std::endl;
+	resp.setHeader("content-length", "");
+	resp.setHeader("content-type", "text/html");
+	resp.setBody(path);
+}
 
 void	Socket::initSocket(int portNumber)
 {
@@ -46,55 +157,3 @@ void	Socket::initSocket(int portNumber)
 	}
 }
 
-Socket::Socket(std::string IPAddress, int portNumber)
-{
-	(void)IPAddress;
-	initSocket(portNumber);
-	startListen();
-	int clientSocket = accept(_socket, NULL, NULL);
-	char buf[1024] = {0};
-	recv(clientSocket, buf, sizeof(buf), 0);
-	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
-	Request rq(buf);
-	// Will need to make a function to find the correct path from host + uri
-	std::ostringstream s;
-	s << "resources" << rq.getFilePath();
-	s << "simple.html";
-	//std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
-	Response r;
-	r.setStatusCode(200);
-	r.setHeader("content-length", "94");
-	r.setHeader("content-type", "text/html");
-	std::string filename = s.str();
-	r.setBody(filename);
-	//std::string msg = r.writeHeader();
-	r.sendResponse(clientSocket);
-}
-
-Socket::~Socket()
-{
-	if (_socket >= 0)
-		close(_socket);
-}
-
-int const & Socket::getFd() const
-{
-	return _socket;
-}
-
-void	Socket::log(std::string const & msg) const
-{
-	std::cout << msg << std::endl;
-}
-
-void Socket::startListen()
-{
-    if (listen(_socket, 20) < 0)
-    {
-		std::cerr << "Socket listen failed" << std::endl;
-    }    std::ostringstream ss;
-    ss << "\n*** Listening on ADDRESS: localhost" 
-        << " PORT: " << ntohs(_socketAddr.sin_port) 
-        << " ***\n\n";
-    log(ss.str());
-}
