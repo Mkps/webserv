@@ -29,7 +29,6 @@ class Socket {
 		void		startListen();
 		void		sendResponse();
 		void		initSocket(int portNumber);
-  		void		processRequest(Request const & req, Response & resp);
 
 		int			_socket;
 		sockaddr_in _socketAddr;

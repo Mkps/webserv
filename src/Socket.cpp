@@ -24,6 +24,7 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
+enum e_fileStatus{FILE_REG = 0, FILE_DIR, FILE_NOT, FILE_ELS};
 Socket::Socket(std::string IPAddress, int portNumber)
 {
 	(void)IPAddress;
@@ -35,7 +36,7 @@ Socket::Socket(std::string IPAddress, int portNumber)
 	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
 	Request rq(buf);
 	Response r;
-	processRequest(rq, r);
+	r.processRequest(rq);
 	r.sendResponse(clientSocket);
 }
 
@@ -66,15 +67,28 @@ void Socket::startListen()
     log(ss.str());
 }
 #include <sys/stat.h>
-inline int fileExists(const std::string & name) {
+inline int	fileStatus(const std::string & path)
+{
 	struct stat buf;
-	if (stat( name.c_str(), &buf) == 0)
+	if (stat( path.c_str(), &buf) == 0)
 	{
-		std::cout << "st size " << buf.st_size << std::endl;
-		return buf.st_size;
+		if (buf.st_mode & S_IFDIR)
+			return FILE_DIR;
+		else if (buf.st_mode & S_IFREG)
+			return FILE_REG;
+		else
+			return FILE_ELS;
 	}
 	else
-		return -1;
+		return FILE_NOT;
+}
+
+inline int	getFileSize(const std::string & path)
+{
+	struct stat buf;
+	if (stat( path.c_str(), &buf) == 0)
+		return buf.st_size;
+	return FILE_NOT;
 }
 
 template <typename T>
@@ -83,55 +97,6 @@ std::string NumberToString ( T Number )
 	std::ostringstream ss;
 	ss << Number;
 	return ss.str();
-}
-
-void	Socket::processRequest(Request const & req, Response & resp)
-{
-	int tmp;
-	std::string myStr[] = {"index", "index.html"};
-	std::vector<std::string>tryFiles;
-	std::string root = ".";
-	std::string path = root + req.getFilePath();
-	tryFiles.assign(myStr, myStr + 2);
-	if (!req.getFilePath().empty()  && req.getFilePath()[req.getFilePath().size() - 1] == '/')
-	{
-		for (std::vector<std::string>::const_iterator it = tryFiles.begin(); it != tryFiles.end(); ++it) {
-			std::string filePath(path + *it);
-			std::cout << "file path is " << filePath << std::endl;
-			if ((tmp = fileExists(filePath)) == -1) {
-				resp.setStatusCode(400);
-				resp.setHeader("content-length", "24");
-				resp.setHeader("content-type", "text/html");
-				resp.setBodyError();
-			}
-			else {
-				resp.setStatusCode(200);
-				break;
-			}
-		}
-	}
-	else {
-			std::cout << "file path is " << path << std::endl;
-			if ((tmp = fileExists(path)) == -1) {
-				resp.setStatusCode(404);
-				resp.setHeader("content-length", "24");
-				resp.setHeader("content-type", "text/html");
-				resp.setBodyError();
-			}
-			else {
-				resp.setStatusCode(200);
-			}
-	}
-	if (resp.getStatusCode() != 200) {
-		std::cerr << "couldnt find file" << std::endl;
-		return;
-	}
-	resp.setStatusCode(200);
-	std::string bodySize = NumberToString<int>(tmp);
-	std::cout << bodySize << std::endl;
-	resp.setHeader("content-length", "");
-	resp.setHeader("content-type", "text/html");
-	resp.setBody(path);
 }
 
 void	Socket::initSocket(int portNumber)
