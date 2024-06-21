@@ -24,7 +24,6 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
-enum e_fileStatus{FILE_REG = 0, FILE_DIR, FILE_NOT, FILE_ELS};
 Socket::Socket(std::string IPAddress, int portNumber)
 {
 	(void)IPAddress;
@@ -66,39 +65,6 @@ void Socket::startListen()
         << " ***\n\n";
     log(ss.str());
 }
-#include <sys/stat.h>
-inline int	fileStatus(const std::string & path)
-{
-	struct stat buf;
-	if (stat( path.c_str(), &buf) == 0)
-	{
-		if (buf.st_mode & S_IFDIR)
-			return FILE_DIR;
-		else if (buf.st_mode & S_IFREG)
-			return FILE_REG;
-		else
-			return FILE_ELS;
-	}
-	else
-		return FILE_NOT;
-}
-
-inline int	getFileSize(const std::string & path)
-{
-	struct stat buf;
-	if (stat( path.c_str(), &buf) == 0)
-		return buf.st_size;
-	return FILE_NOT;
-}
-
-template <typename T>
-std::string NumberToString ( T Number )
-{
-	std::ostringstream ss;
-	ss << Number;
-	return ss.str();
-}
-
 void	Socket::initSocket(int portNumber)
 {
 	_socket = socket(AF_INET, SOCK_STREAM, 0);

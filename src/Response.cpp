@@ -105,18 +105,27 @@ void Response::processRequest(Request const &req) {
   } else if (fileStatus(path) == FILE_NOT) {
     setBodyError(404);
   }
-  setHeader("content-length", "");
-  setHeader("content-type", "text/html");
-  _path = path;
-  setBody(path);
+  if (req.getRequestLine().getMethod() == "GET") {
+    httpMethodGet(req);
+  } else if (req.getRequestLine().getMethod() == "POST") {
+    httpMethodPost(req);
+  } else if (req.getRequestLine().getMethod() == "DELETE") {
+    httpMethodPost(req);
+  } else {
+    std::cout << "valid method but not handled?" << std::endl;
+    setHeader("content-length", "");
+    setHeader("content-type", "text/html");
+    _path = path;
+    setBody(path);
+  }
 }
 
 void Response::setBodyError(int status) {
 
   std::ostringstream s;
   _statusCode = status;
-  setHeader("content-length", "24");
-  setHeader("content-type", "text/html");
+  setHeader("content-length", "");
+  setHeader("content-type", "text/plain");
   s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
     << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
   _body = s.str();
