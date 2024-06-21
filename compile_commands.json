@@ -1,0 +1,104 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/main.o",
+      "src/main.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/main.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/Socket.o",
+      "src/Socket.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/Socket.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/Socket.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/Server.o",
+      "src/Server.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/Server.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/Server.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/Request.o",
+      "src/Request.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/Request.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/Request.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/RequestLine.o",
+      "src/RequestLine.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/RequestLine.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/RequestLine.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-I./include/",
+      "-o",
+      "build/Response.o",
+      "src/Response.cpp"
+    ],
+    "directory": "/home/alx-DST/Code/webserv",
+    "file": "/home/alx-DST/Code/webserv/src/Response.cpp",
+    "output": "/home/alx-DST/Code/webserv/build/Response.o"
+  }
+]
