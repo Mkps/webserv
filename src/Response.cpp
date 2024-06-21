@@ -22,9 +22,11 @@
 #include <vector>
 
 Response::Response() {
-  _statusCode = 400;
+  // If this is used something went very wrong...
+  _statusCode = 500;
   _body = "<!DOCTYPE "
-          "html>\n<html>\n<head>\n</head>\n<body>\n<h3>NO</h3>\n</body>\n</"
+          "html>\n<html>\n<head>\n</head>\n<body>\n<h1>500</h1>\n<p>Internal "
+          "Server Error</p></body>\n</"
           "html>\r\n";
 }
 
@@ -174,7 +176,7 @@ void Response::httpMethodDelete() {
 }
 
 void Response::httpMethodGet(Request const &req) {
-  (void)req; //req will be needed for the cgi(env + headers)
+  (void)req; // req will be needed for the cgi(env + headers)
   bool isCGI = 0;
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
@@ -184,6 +186,14 @@ void Response::httpMethodGet(Request const &req) {
     setBodyError(_statusCode);
   }
 }
-  void Response::httpMethodPost(Request const &req) {
-  	(void)req;// will probably need it... Maybe 
+void Response::httpMethodPost(Request const &req) {
+  (void)req; // will probably need it... Maybe
+  bool isCGI = 0;
+  if (isCGI) {
+    std::cout << "Do cgi stuff here" << std::endl;
+  } else if (_statusCode == 200) {
+    std::cout << "If not cgi but post" << std::endl;
+  } else {
+    setBodyError(_statusCode);
   }
+}
