@@ -21,7 +21,7 @@ Request::Request() {}
 
 Request::Request(std::string const &request) : _requestLine(request) {
   if (_requestLine.isRequestLineValid() < 0)
-    std::cerr << "invalid method" << std::endl;
+    std::cerr << "invalid method or http version" << std::endl;
   fetchHeaders(request);
 }
 

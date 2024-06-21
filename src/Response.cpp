@@ -105,17 +105,21 @@ void Response::processRequest(Request const &req) {
   } else if (fileStatus(path) == FILE_NOT) {
     setBodyError(404);
   }
+  if (_statusCode == 200)
+  	_path = path;
   if (req.getRequestLine().getMethod() == "GET") {
+    std::cout << "GET detected" << std::endl;
     httpMethodGet(req);
   } else if (req.getRequestLine().getMethod() == "POST") {
+    std::cout << "POST detected" << std::endl;
     httpMethodPost(req);
   } else if (req.getRequestLine().getMethod() == "DELETE") {
-    httpMethodPost(req);
+    std::cout << "DELETE detected" << std::endl;
+    httpMethodDelete();
   } else {
     std::cout << "valid method but not handled?" << std::endl;
     setHeader("content-length", "");
     setHeader("content-type", "text/html");
-    _path = path;
     setBody(path);
   }
 }
@@ -190,6 +194,8 @@ void Response::httpMethodGet(Request const &req) {
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) { // We have a valid file
+    setHeader("content-length", "");
+    setHeader("content-type", "text/html");
     setBody(_path);
   } else {
     setBodyError(_statusCode);
