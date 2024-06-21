@@ -23,6 +23,7 @@ class Response {
 		short		_statusCode;
 		hashmap		_responseHeaders;
 		std::string	_body;
+		std::string	_path;
 	public:
 		Response();
 		Response(Request const &request);
@@ -36,13 +37,18 @@ class Response {
 		size_t const &		getContentLength() const;
 
 		std::string			getResponseMsg();
-		void				setBodyError();
+		void				setBodyError(int status);
 		void				setBody(std::string const & filename);
 		hashmap const &		getHeader() const;
 		std::string const &	getHeaderValue(std::string const & key) const;
 		void				setHeader(std::string const & key, std::string const & value);
 
 		std::string			writeHeader();
+		void				processRequest(Request const & req);
 		void				sendResponse(int clientSocket);
+
+		void				httpMethodDelete();
+		void				httpMethodGet(Request const& req);
+		void				httpMethodPost(Request const& req);
 };
 #endif
