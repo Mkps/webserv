@@ -5,8 +5,8 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/06/17 14:51:15 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/21 11:47:30 by obouhlel         ###   ########.fr       */
+/*   Created: 2024/06/21 15:14:33 by obouhlel          #+#    #+#             */
+/*   Updated: 2024/06/22 14:07:04 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,20 +30,27 @@ class Server {
 		std::vector<Socket *>	getSockets() const;
 		std::vector<Client *>	getClients() const;
 
+		static void				signalHandler(int signal);
 		void					run();
 
 	private:
 		std::vector<s_pollfd>	_pollfds;
 		std::vector<Socket *>	_sockets;
 		std::vector<Client *>	_clients;
-		size_t					_nb_clients;
-		size_t					_nb_sockets;
+		static Server			*_instance;
 
 		Server(void);
-		Socket	*_createSocket(std::string ip, int port);
-		void	_deleteSocket(Socket *socket);
-		Client	*_createClient(Socket *socket);
-		void	_deleteClient(Client *client);
+
+		int						_handleNewConnection(void);
+		int						_handleClientsEvent(void);
+		void					_handleClientResponse(Client *client);
+		int						_handleClientRequest(Client *client);
+	
+
+		Socket					*_createSocket(std::string ip, int port);
+		void					_deleteSocket(Socket *socket);
+		Client					*_createClient(Socket *socket);
+		void					_deleteClient(Client *client);
 };
 
-#endif //SERVER_HPP
+#endif

@@ -3,37 +3,37 @@
 /*                                                        :::      ::::::::   */
 /*   Socket.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/17 14:51:26 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/17 14:51:26 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/22 10:33:37 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
-#include <netinet/in.h>
-#include <string>
-#include "Request.hpp"
-#include "Response.hpp"
+# include <iostream>
+# include <netinet/in.h>
+
+#define MAX_CONNECTIONS 10
+
 class Socket {
 	public:
-		Socket(std::string IPAddress, int portNumber);
+		Socket(std::string ip, short port);
 		~Socket();
-		
-		void		log(std::string const & msg) const;
-		int const &	getFd() const;
+
+		int			getFd() const;
+		std::string	getIp() const;
+		short		getPort() const;
+
 	private:
-		Socket();
-		void		startListen();
-		void		sendResponse();
-		void		initSocket(int portNumber);
-
-		int			_socket;
-		sockaddr_in _socketAddr;
-		Request		_request;
-		Response	_response;
-
+		int			_socketFd;
+		sockaddr_in	_addr;
+		std::string	_ip;
+		short		_port;
 };
+
+std::ostream & operator<<(std::ostream & o, Socket const & r);
+
 #endif

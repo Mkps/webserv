@@ -17,9 +17,12 @@ class Client {
 		Client(Socket *socket, size_t id);
 		~Client(void);
 
+		Socket		*getSocket() const;
+		std::string	getIp() const;
+		size_t		getId() const;
 		int			getFd() const;
 		std::string	getRequest() const;
-		std::string	getIp() const;
+		void		clearRequest(void);
 
 		int			recvRequest();
 		void		log(void) const;
