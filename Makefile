@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: aloubier <marvin@42.fr>                    +#+  +:+       +#+         #
+#    By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/08/30 16:10:19 by aloubier          #+#    #+#              #
-#    Updated: 2023/12/20 16:08:53 by aloubier         ###   ########.fr        #
+#    Updated: 2024/06/23 14:16:44 by obouhlel         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,6 +20,7 @@ OBJ_DIR = build/
 
 SRC_FILES = main.cpp \
 			Socket.cpp \
+			Client.cpp \
 			Server.cpp \
 			Request.cpp \
 			RequestLine.cpp \
