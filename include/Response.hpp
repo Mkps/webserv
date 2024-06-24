@@ -47,8 +47,9 @@ class Response {
 		void				processRequest(Request const & req);
 		void				sendResponse(int clientSocket);
 
-		void				httpMethodDelete();
+		void				httpMethodDelete(Request const& req);
 		void				httpMethodGet(Request const& req);
 		void				httpMethodPost(Request const& req);
+		std::string			findContentType();
 };
 #endif

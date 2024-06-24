@@ -87,26 +87,10 @@ void Response::processRequest(Request const &req) {
     setBodyError(400);
     return;
   }
-  setStatusCode(200);
-  std::string myStr[] = {"index", "index.html"};
-  std::vector<std::string> tryFiles;
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
-  tryFiles.assign(myStr, myStr + 2);
-  if (fileStatus(path) == FILE_DIR) {
-    for (std::vector<std::string>::const_iterator it = tryFiles.begin();
-         it != tryFiles.end(); ++it) {
-      std::string filePath(path + *it);
-      if (fileStatus(filePath) == FILE_NOT) {
-        setBodyError(404);
-      } else
-        break;
-    }
-  } else if (fileStatus(path) == FILE_NOT) {
-    setBodyError(404);
-  }
-  if (_statusCode == 200)
-  	_path = path;
+  _path = path;
+  setStatusCode(200);
   if (req.getRequestLine().getMethod() == "GET") {
     std::cout << "GET detected" << std::endl;
     httpMethodGet(req);
@@ -115,12 +99,13 @@ void Response::processRequest(Request const &req) {
     httpMethodPost(req);
   } else if (req.getRequestLine().getMethod() == "DELETE") {
     std::cout << "DELETE detected" << std::endl;
-    httpMethodDelete();
+    httpMethodDelete(req);
   } else {
     std::cout << "valid method but not handled?" << std::endl;
+	setStatusCode(400);
     setHeader("content-length", "");
-    setHeader("content-type", "text/html");
-    setBody(path);
+    setHeader("content-type", "text/plain");
+    setBodyError(_statusCode);
   }
 }
 
@@ -163,7 +148,27 @@ std::string Response::writeHeader() {
        it != _responseHeaders.end(); ++it)
     s << it->first << " : " << it->second << ",\n";
   s << "\r\n";
+  std::cout << s.str() << std::endl;
   return s.str();
+}
+
+std::string			Response::findContentType(){
+	size_t pos;
+	pos = _path.find_last_of(".");
+	std::string type = _path.substr(pos + 1);
+	if (type == "html")
+		return "text/html";
+	else if (type == ".css")
+		return "text/css";
+	else if (type == "js")
+		return "text/javascript";
+	else if (type == "jpeg" || type == "jpg")
+		return "image/jpeg";
+	else if (type == "png")
+		return "image/png";
+	else if (type == "bmp")
+		return "image/bmp";
+	return "text/plain";
 }
 
 inline void sendStr(int clientSocket, std::string const &str) {
@@ -174,9 +179,11 @@ void Response::sendResponse(int clientSocket) {
   sendStr(clientSocket, _body);
 }
 
-void Response::httpMethodDelete() {
-  if (fileStatus(_path) == FILE_REG) {
-    if (remove(_path.c_str()) == EXIT_SUCCESS)
+void Response::httpMethodDelete(Request const &req) {
+  std::string root = "./resources";
+  std::string path = root + req.getFilePath();
+  if (fileStatus(path) == FILE_REG || fileStatus(path) == FILE_DIR) {
+    if (remove(path.c_str()) == EXIT_SUCCESS)
       _statusCode = 204;
     else
       _statusCode = 403;
@@ -187,30 +194,70 @@ void Response::httpMethodDelete() {
   else
     setBody("");
 }
-
 void Response::httpMethodGet(Request const &req) {
   (void)req; // req will be needed for the cgi(env + headers)
+  std::string myStr[] = {"index", "index.html"};
+  std::vector<std::string> tryFiles;
+  std::string root = "./resources";
+  std::string path = root + req.getFilePath();
+  tryFiles.assign(myStr, myStr + 2);
+  if (fileStatus(path) == FILE_DIR) {
+    for (std::vector<std::string>::const_iterator it = tryFiles.begin();
+         it != tryFiles.end(); ++it) {
+      std::string filePath(path + *it);
+      if (fileStatus(filePath) == FILE_NOT) {
+        setBodyError(404);
+      } else
+        break;
+    }
+  } else if (fileStatus(path) == FILE_NOT) {
+    setBodyError(404);
+  }
+  if (_statusCode == 200)
+    _path = path;
   bool isCGI = 0;
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) { // We have a valid file
-    setHeader("content-length", "");
-    setHeader("content-type", "text/html");
+	std::ostringstream ss;
+	ss << _body.size();
+    setHeader("Content-Length", "");
+    setHeader("Content-Type", findContentType());
     setBody(_path);
+	std::cout << "path " << _path << " size " << ss.str() << " type " << findContentType() <<std::endl;
   } else {
     setBodyError(_statusCode);
   }
 }
+inline std::string generate_filename() {
+    std::ostringstream oss;
+    time_t t = time(NULL);
+    oss << "resource_" << t;
+    return oss.str();
+}
+
 void Response::httpMethodPost(Request const &req) {
   (void)req; // will probably need it... Maybe
+  std::string root = "./resources";
+  std::string path = root + req.getFilePath();
   bool isCGI = 0;
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) {
     std::cout << "If not cgi but post" << std::endl;
-	std::ofstream outFile;
-	std::ifstream inFile;
-	inFile.open(_path.c_str(), std::ios::in);
+    std::ofstream outFile;
+	if (fileStatus(path) == FILE_DIR)
+		path += generate_filename();
+    outFile.open(path.c_str(), std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
+    if (!outFile.good()) {
+      _statusCode = 500;
+	  std::cout << "badfile" << std::endl;
+      return;
+    }
+	outFile.write(req.getRequestBody().c_str(), req.getRequestBody().size());
+	std::cout << "goodfile " << _statusCode << std::endl;
+	_statusCode = 204;
+	return ;
   } else {
     setBodyError(_statusCode);
   }
