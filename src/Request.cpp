@@ -22,7 +22,7 @@ Request::Request() {}
 Request::Request(std::string const &request) : _requestLine(request) {
   if (_requestLine.isRequestLineValid() < 0)
     std::cerr << "invalid method or http version" << std::endl;
-  fetchHeaders(request);
+  fetchData(request);
 }
 
 Request::Request(Request const &src) { *this = src; }
@@ -45,12 +45,13 @@ void Request::setRequest(std::string const &request) {
   _requestLine = req;
   if (_requestLine.isRequestLineValid() < 0)
     std::cerr << "invalid method or http version" << std::endl;
-  fetchHeaders(request);
+  fetchData(request);
 }
 
 Request const &Request::getRequest() const { return *this; }
 
 RequestLine const &Request::getRequestLine() const { return _requestLine; }
+std::string const &Request::getRequestBody() const { return _body; }
 
 hashmap const &Request::getRequestHeaders() const { return _requestHeaders; }
 
@@ -66,12 +67,20 @@ inline std::string trim_copy(std::string s) {
   return s;
 }
 
-void Request::fetchHeaders(std::string const &request) {
-  std::istringstream req(request);
+void Request::fetchData(std::string const &request) {
+  size_t pos = request.find("\r\n");
+  std::string requestLine = request.substr(0, pos);
+  std::string requestData = request.substr(pos + 2);
+
+  pos = requestData.find("\r\n\r\n");
+  std::string headers = requestData.substr(0, pos);
+  _body = requestData.substr(pos + 4);
+
+  std::istringstream header_stream(headers);
   std::string header;
-  std::string::size_type index;
-  while (std::getline(req, header) && header[0] != '\r') {
-    index = header.find(':', 0);
+  size_t index;
+  while (std::getline(header_stream, header)) {
+    index = header.find(": ", 0);
     if (index != std::string::npos) {
       _requestHeaders.insert(
           std::make_pair(trim_copy(header.substr(0, index)),

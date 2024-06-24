@@ -90,7 +90,7 @@ void Response::processRequest(Request const &req) {
   setStatusCode(200);
   std::string myStr[] = {"index", "index.html"};
   std::vector<std::string> tryFiles;
-  std::string root = ".";
+  std::string root = "./resources";
   std::string path = root + req.getFilePath();
   tryFiles.assign(myStr, myStr + 2);
   if (fileStatus(path) == FILE_DIR) {
@@ -208,6 +208,9 @@ void Response::httpMethodPost(Request const &req) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) {
     std::cout << "If not cgi but post" << std::endl;
+	std::ofstream outFile;
+	std::ifstream inFile;
+	inFile.open(_path.c_str(), std::ios::in);
   } else {
     setBodyError(_statusCode);
   }
