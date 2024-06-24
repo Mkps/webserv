@@ -24,7 +24,8 @@ SRC_FILES = main.cpp \
 			Server.cpp \
 			Request.cpp \
 			RequestLine.cpp \
-			Response.cpp
+			Response.cpp \
+			http_utils.cpp
 
 SRC = $(addprefix $(SRC_DIR), $(SRC_FILES))
 

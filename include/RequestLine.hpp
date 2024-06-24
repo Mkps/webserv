@@ -11,9 +11,9 @@ class RequestLine{
 	public:
 		RequestLine();
 		RequestLine(std::string const & requestLine);
-		~RequestLine();
 		RequestLine(RequestLine const & src);
 		RequestLine& operator= (RequestLine const & rhs);
+		~RequestLine();
 
 		std::string const & getMethod() const;
 		void				setMethod(std::string &method);
@@ -22,6 +22,6 @@ class RequestLine{
 		std::string const & getHttpVersion() const;
 		void				setHttpVersion(std::string &Uri);
 
-		bool				isRequestLineValid();
+		int					isRequestLineValid();
 };
 #endif

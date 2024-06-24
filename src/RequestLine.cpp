@@ -8,7 +8,7 @@ RequestLine::RequestLine()
 {
 	_method = "";
 	_requestUri = "";
-	_httpVersion = "HTTP/1.1";
+	_httpVersion = "";
 }
 
 RequestLine::RequestLine(std::string const & requestLine)
@@ -56,7 +56,7 @@ std::string const & RequestLine::getMethod() const
 	return _method;
 }
 
-void				RequestLine::setMethod(std::string &method)
+void	RequestLine::setMethod(std::string &method)
 {
 	_method = method;
 }
@@ -66,7 +66,7 @@ std::string const & RequestLine::getRequestUri() const
 	return _requestUri;
 }
 
-void				RequestLine::setRequestUri(std::string &Uri)
+void	RequestLine::setRequestUri(std::string &Uri)
 {
 	_requestUri = Uri;
 }
@@ -76,20 +76,22 @@ std::string const & RequestLine::getHttpVersion() const
 	return _httpVersion;
 }
 
-void				RequestLine::setHttpVersion(std::string &ver)
+void	RequestLine::setHttpVersion(std::string &ver)
 {
 	_httpVersion = ver;
 }
 
 
-bool				RequestLine::isRequestLineValid()
+int	RequestLine::isRequestLineValid()
 {
 	std::vector<std::string> validMethod;
 	validMethod.push_back("GET");
 	validMethod.push_back("POST");
 	validMethod.push_back("DELETE");
 	if (std::find(validMethod.begin(), validMethod.end(), _method) == validMethod.end())
-		return false;
-	return true;
+		return -1;
+	if (_httpVersion != "HTTP/1.0" && _httpVersion != "HTTP/1.1")
+		return -2;
+	return 0;
 }
 
