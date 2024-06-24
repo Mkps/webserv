@@ -3,98 +3,63 @@
 /*                                                        :::      ::::::::   */
 /*   Socket.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/17 14:51:28 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/17 14:51:29 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/22 10:54:09 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Socket.hpp"
-#include <asm-generic/socket.h>
-#include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <iostream>
-#include <cstdio>
-#include <sstream>
+#include <stdexcept>
 #include <unistd.h>
-#include <string>
-#include "Request.hpp"
-#include "Response.hpp"
+#include <strings.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
-void	Socket::initSocket(int portNumber)
+Socket::Socket(std::string ip, short port) : _ip(ip), _port(port)
 {
-	_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (_socket < 0) {
-		//throw SocketCreationException();
-		std::cerr << "socket creation exception" << std::endl;
-		return ;
-	}        
-	const int enable = 1;
-	if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &enable, sizeof(int)))
+	int opt = 1;
+
+	_socketFd = socket(AF_INET, SOCK_STREAM, 0);
+	if (_socketFd == -1)
 	{
-		std::cerr << "socket configuration exception" << std::endl;
-		return ;
+		throw std::runtime_error("Failed to create socket");
 	}
-	_socketAddr.sin_family = AF_INET;
-	_socketAddr.sin_port = htons(portNumber);
-	_socketAddr.sin_addr.s_addr = INADDR_ANY;
-	if (bind(_socket, (sockaddr *)&_socketAddr, sizeof(_socketAddr)) < 0) {
-		perror("Error: ");
-		std::cerr << "Error creating socket" << std::endl;
+
+	if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1)
+	{
+		throw std::runtime_error("Failed to reuse socket address");
 	}
+
+	bzero(&_addr, sizeof(_addr));
+	_addr.sin_family = AF_INET;
+	_addr.sin_addr.s_addr = inet_addr(ip.c_str());
+	_addr.sin_port = htons(port);
+
+	if (bind(_socketFd, (sockaddr *)&_addr, sizeof(_addr)) == -1)
+	{
+		throw std::runtime_error("Failed to bind socket");
+	}
+
+	if (listen(_socketFd, MAX_CONNECTIONS) == -1)
+	{
+		throw std::runtime_error("Failed to listen on socket");
+	}
+
+	std::cout << "Socket created : " << *this << std::endl;
 }
 
-Socket::Socket(std::string IPAddress, int portNumber)
-{
-	(void)IPAddress;
-	initSocket(portNumber);
-	startListen();
-	int clientSocket = accept(_socket, NULL, NULL);
-	char buf[1024] = {0};
-	recv(clientSocket, buf, sizeof(buf), 0);
-	std::cout << "message from client --- \n" <<  buf << " ---" << std::endl;
-	Request rq(buf);
-	// Will need to make a function to find the correct path from host + uri
-	std::ostringstream s;
-	s << "resources" << rq.getFilePath();
-	s << "simple.html";
-	//std::string msg("HTTP/1.1 200 OK\nContent-Type:text/html\nContent-Length: 94\n\n");
-	Response r;
-	r.setStatusCode(200);
-	r.setHeader("content-length", "94");
-	r.setHeader("content-type", "text/html");
-	std::string filename = s.str();
-	r.setBody(filename);
-	//std::string msg = r.writeHeader();
-	r.sendResponse(clientSocket);
-}
+Socket::~Socket(void) { close(_socketFd); }
 
-Socket::~Socket()
-{
-	if (_socket >= 0)
-		close(_socket);
-}
+int Socket::getFd() const { return _socketFd; }
 
-int const & Socket::getFd() const
-{
-	return _socket;
-}
+std::string	Socket::getIp() const { return _ip; }
 
-void	Socket::log(std::string const & msg) const
-{
-	std::cout << msg << std::endl;
-}
+short Socket::getPort() const { return _port; }
 
-void Socket::startListen()
+std::ostream & operator<<(std::ostream & o, Socket const & r)
 {
-    if (listen(_socket, 20) < 0)
-    {
-		std::cerr << "Socket listen failed" << std::endl;
-    }    std::ostringstream ss;
-    ss << "\n*** Listening on ADDRESS: localhost" 
-        << " PORT: " << ntohs(_socketAddr.sin_port) 
-        << " ***\n\n";
-    log(ss.str());
+	o << r.getIp() << ":" << r.getPort();
+	return o;
 }

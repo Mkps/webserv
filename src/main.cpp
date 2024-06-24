@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <marvin@42.fr>                    +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/14 16:28:39 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/23 14:15:40 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@ int	main(int ac, char **av)
 		std::cout << "Error: Incorrect argument count" << std::endl;
 		return 1;
 	}
-	Server	serv(av[1]);
+	Server *server = new Server(av[1]);
+	server->run();
+	delete server;
 	return 0;
 }
