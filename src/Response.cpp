@@ -74,6 +74,8 @@ inline std::string getResponse(short status) {
       return "Forbidden";
     else if (status == 404)
       return "File Not Found";
+    else if (status == 405)
+      return "Method Not Allowed";
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
@@ -102,7 +104,7 @@ void Response::processRequest(Request const &req) {
     httpMethodDelete(req);
   } else {
     std::cout << "valid method but not handled?" << std::endl;
-	setStatusCode(400);
+	setStatusCode(405);
     setHeader("content-length", "");
     setHeader("content-type", "text/plain");
     setBodyError(_statusCode);
