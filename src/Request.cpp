@@ -12,6 +12,7 @@
 
 #include "Request.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -82,9 +83,10 @@ void Request::fetchData(std::string const &request) {
   while (std::getline(header_stream, header)) {
     index = header.find(": ", 0);
     if (index != std::string::npos) {
-      _requestHeaders.insert(
-          std::make_pair(trim_copy(header.substr(0, index)),
-                         trim_copy(header.substr(index + 1))));
+      std::string key = trim_copy(header.substr(0, index));
+      std::string value = trim_copy(header.substr(index + 1));
+      std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+      _requestHeaders[key] = value;
     }
   }
 }
