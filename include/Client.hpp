@@ -2,6 +2,8 @@
 #define CLIENT_HPP
 
 #include <iostream>
+#include "Request.hpp"
+#include "Response.hpp"
 
 class Socket;
 
@@ -25,10 +27,13 @@ class Client {
 		void		clearRequest(void);
 
 		int			recvRequest();
+		void		handleResponse();
 		void		log(void) const;
 
 	private:
 		Socket		*_socket;
+		Response	_res;
+		Request		_req;
 		std::string	_ip;
 		size_t		_id;
 		int			_fd;

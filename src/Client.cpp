@@ -58,6 +58,7 @@ int	Client::recvRequest(void)
 			_request.append(buffer);
 		}
 	}
+	_req.setRequest(_request);
 	return (CLIENT_CONNECTED);
 }
 
@@ -71,4 +72,10 @@ std::ostream & operator<<(std::ostream & o, Client const & r)
 {
 	o << "Client " << r.getId() << " (" << r.getFd() << ") from " << r.getIp() << " on socket " << *r.getSocket();
 	return o;
+}
+
+void	Client::handleResponse(){
+	_res.processRequest(_req);
+	_res.sendResponse(_fd);
+	return (0);
 }

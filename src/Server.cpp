@@ -222,9 +222,11 @@ void Server::_handleClientResponse(Client *client)
 							"</body>\n"
 							"</html>\n";
 	
-	send(client->getFd(), httpResponse.c_str(), httpResponse.size(), 0);
-	std::cout << "Response sent to " << *client << std::endl;
-	std::cout << httpResponse << std::endl;
+	(void)httpResponse;
+	client->handleResponse();
+	//send(client->getFd(), httpResponse.c_str(), httpResponse.size(), 0);
+	//std::cout << "Response sent to " << *client << std::endl;
+	//std::cout << httpResponse << std::endl;
 }
 
 void Server::run()
