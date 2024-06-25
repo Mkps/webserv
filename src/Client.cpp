@@ -77,5 +77,5 @@ std::ostream & operator<<(std::ostream & o, Client const & r)
 void	Client::handleResponse(){
 	_res.processRequest(_req);
 	_res.sendResponse(_fd);
-	return (0);
+	return ;
 }

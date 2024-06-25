@@ -145,12 +145,11 @@ void Response::setBody(std::string const &filename) {
 
 std::string Response::writeHeader() {
   std::ostringstream s;
-  s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\n";
+  s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\r\n";
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
-    s << it->first << " : " << it->second << ",\n";
+    s << it->first << " : " << it->second << ",\r\n";
   s << "\r\n";
-  std::cout << s.str() << std::endl;
   return s.str();
 }
 
@@ -177,8 +176,10 @@ inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
 void Response::sendResponse(int clientSocket) {
-  sendStr(clientSocket, writeHeader());
-  sendStr(clientSocket, _body);
+  std::string ret = writeHeader() + _body + "\r\n\r\n";
+  std::cout << "response is >>>" << std::endl;
+  sendStr(clientSocket, ret);
+//  sendStr(clientSocket, _body);
 }
 
 void Response::httpMethodDelete(Request const &req) {
@@ -223,7 +224,7 @@ void Response::httpMethodGet(Request const &req) {
   } else if (_statusCode == 200) { // We have a valid file
 	std::ostringstream ss;
 	ss << _body.size();
-    setHeader("Content-Length", "");
+    setHeader("Content-Length", ss.str());
     setHeader("Content-Type", findContentType());
     setBody(_path);
 	std::cout << "path " << _path << " size " << ss.str() << " type " << findContentType() <<std::endl;
