@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/18 15:30:25 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/25 11:42:06 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 13:42:59 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -176,7 +176,7 @@ inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
 void Response::sendResponse(int clientSocket) {
-  std::string res = writeHeader() + _body + "\r\n\r\n";
+  std::string res = writeHeader() + _body + "\r\n";
   std::cout << "response is >>>" << std::endl;
   std::cout << res << std::endl;
   sendStr(clientSocket, res);

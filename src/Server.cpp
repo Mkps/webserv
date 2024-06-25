@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 12:21:47 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 14:02:24 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,6 +164,62 @@ int Server::_handleNewConnection(void)
 	return (EXIT_SUCCESS);
 }
 
+std::string poll_event_to_string(short events)
+{
+	std::string ret = "";
+
+	if (events & POLLIN)
+		ret.append("POLLIN ");
+	if (events & POLLPRI)
+		ret.append("POLLPRI ");
+	if (events & POLLOUT)
+		ret.append("POLLOUT ");
+	if (events & POLLRDHUP)
+		ret.append("POLLRDHUP ");
+	if (events & POLLERR)
+		ret.append("POLLERR ");
+	if (events & POLLHUP)
+		ret.append("POLLHUP ");
+	if (events & POLLNVAL)
+		ret.append("POLLNVAL ");
+	if (events & POLLRDNORM)
+		ret.append("POLLRDNORM ");
+	if (events & POLLRDBAND)
+		ret.append("POLLRDBAND ");
+	if (events & POLLWRNORM)
+		ret.append("POLLWRNORM ");
+	if (events & POLLWRBAND)
+		ret.append("POLLWRBAND ");
+	if (ret.size())
+	{
+		ret = ret.substr(0, ret.size() - 1);
+		return ret;
+	}
+	return "NONE";
+}
+
+void Server::printPollfds(void) const
+{
+	for (size_t i = 0; i < _pollfds.size(); i++)
+	{
+		std::cout << "Pollfd " << i << " : " << _pollfds[i].fd << std::endl;
+		std::cout << "Pollfd " << i << " : " << poll_event_to_string(_pollfds[i].events) << std::endl;
+		std::cout << "Pollfd " << i << " : " << poll_event_to_string(_pollfds[i].revents) << std::endl;
+	}
+}
+
+void Server::updateEventPollfds(int fd, short events)
+{
+	for (size_t i = 0; i < _pollfds.size(); i++)
+	{
+		if (_pollfds[i].fd == fd)
+		{
+			_pollfds[i].events = events;
+			break;
+		}
+	}
+}
+
 int Server::_handleClientsEvent(void)
 {
 	void	*ptr = NULL;
@@ -171,8 +227,6 @@ int Server::_handleClientsEvent(void)
 
 	for (size_t i = _sockets.size(); i < _pollfds.size(); i++)
 	{
-		if (!(_pollfds[i].revents & POLLIN))
-			continue;
 		ptr = _clients[i - _sockets.size()];
 		if (!ptr)
 		{
@@ -180,13 +234,32 @@ int Server::_handleClientsEvent(void)
 			return (EXIT_FAILURE);
 		}
 		Client	*client = static_cast<Client *>(ptr);
-		ret = _handleClientRequest(client);
-		if (ret == CLIENT_DISCONNECTED)
-			continue;
-		if (client->getRequest().empty())
-			continue;
-		_handleClientResponse(client);
-		_deleteClient(client);
+
+		if (_pollfds[i].revents & (POLLERR | POLLHUP))
+        {
+            std::cout << "Error or hangup detected on socket" << std::endl;
+            _deleteClient(client);
+            continue ;
+        }
+		if (_pollfds[i].revents & POLLIN)
+		{
+			std::cout << "RECEIVED" << std::endl;
+			printPollfds();
+			ret = _handleClientRequest(client);
+			if (ret == CLIENT_DISCONNECTED)
+				continue;
+			if (client->getRequest().empty())
+				continue;
+			updateEventPollfds(client->getFd(), POLLOUT);
+		}
+		if (_pollfds[i].revents & POLLOUT)
+		{
+			std::cout << "SENDING" << std::endl;
+			printPollfds();
+			_handleClientResponse(client);
+			updateEventPollfds(client->getFd(), POLLIN);
+		}
+		// _deleteClient(client);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -221,7 +294,9 @@ void Server::run()
 	signal(SIGINT, Server::signalHandler);
 	while (true)
 	{
-		timeout = 3000 * _pollfds.size();
+		timeout = -1;
+		std::cout << "Polling..." << std::endl;
+		printPollfds();
 		ret = poll(_pollfds.data(), _pollfds.size(), timeout);
 		if (ret == -1)
 		{

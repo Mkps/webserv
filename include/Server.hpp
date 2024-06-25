@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:14:33 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 10:59:36 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 12:44:04 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,9 @@ class Server {
 		std::vector<s_pollfd>	getPollfds() const;
 		std::vector<Socket *>	getSockets() const;
 		std::vector<Client *>	getClients() const;
+
+		void					printPollfds(void) const;
+		void					updateEventPollfds(int fd, short events);
 
 		static void				signalHandler(int signal);
 		void					run();
