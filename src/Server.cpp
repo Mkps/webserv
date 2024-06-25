@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 10:59:46 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 11:36:03 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -183,8 +183,9 @@ int Server::_handleClientsEvent(void)
 		ret = _handleClientRequest(client);
 		if (ret == CLIENT_DISCONNECTED)
 			continue;
+		if (client->getRequest().empty())
+			continue;
 		_handleClientResponse(client);
-		client->clearRequest();
 	}
 	return (EXIT_SUCCESS);
 }
@@ -207,26 +208,7 @@ int Server::_handleClientRequest(Client *client)
 
 void Server::_handleClientResponse(Client *client)
 {
-	std::string httpResponse = "HTTP/1.1 200 OK\r\n"
-							"Content-Type: text/html; charset=UTF-8\r\n"
-							"Connection: close\r\n"
-							"\r\n"
-							"<!DOCTYPE html>\n"
-							"<html>\n"
-							"<head>\n"
-							"<title>Welcome</title>\n"
-							"</head>\n"
-							"<body>\n"
-							"<h1>Hello, World!</h1>\n"
-							"<p>Welcome to our server.</p>\n"
-							"</body>\n"
-							"</html>\n";
-	
-	(void)httpResponse;
 	client->handleResponse();
-	//send(client->getFd(), httpResponse.c_str(), httpResponse.size(), 0);
-	//std::cout << "Response sent to " << *client << std::endl;
-	//std::cout << httpResponse << std::endl;
 }
 
 void Server::run()

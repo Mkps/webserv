@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/18 15:30:25 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/19 17:49:57 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/25 11:35:33 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,10 +145,10 @@ void Response::setBody(std::string const &filename) {
 
 std::string Response::writeHeader() {
   std::ostringstream s;
-  s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\n";
+  s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\r\n";
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
-    s << it->first << " : " << it->second << ",\n";
+    s << it->first << " : " << it->second << ",\r\n";
   s << "\r\n";
   std::cout << s.str() << std::endl;
   return s.str();
@@ -177,8 +177,12 @@ inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
 void Response::sendResponse(int clientSocket) {
-  sendStr(clientSocket, writeHeader());
-  sendStr(clientSocket, _body);
+  std::string httpResponse = writeHeader() + _body;
+  // sendStr(clientSocket, writeHeader());
+  // sendStr(clientSocket, _body);
+  std::cout << "Sending response" << std::endl;
+  std::cout << httpResponse << std::endl;
+  sendStr(clientSocket, httpResponse);
 }
 
 void Response::httpMethodDelete(Request const &req) {

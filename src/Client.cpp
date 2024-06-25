@@ -47,6 +47,7 @@ int	Client::recvRequest(void)
 	int		ret;
 
 	ret = BUFFER_SIZE;
+	_request.clear();
 	while (ret == BUFFER_SIZE)
 	{
 		ret = recv(_fd, buffer, BUFFER_SIZE, 0);
