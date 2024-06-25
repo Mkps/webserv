@@ -24,6 +24,8 @@ class Response {
 		hashmap		_responseHeaders;
 		std::string	_body;
 		std::string	_path;
+		size_t		_bytes_sent;
+		size_t		_offset;
 	public:
 		Response();
 		Response(Request const &request);
@@ -48,6 +50,7 @@ class Response {
 		std::string			writeHeader();
 		void				processRequest(Request const & req);
 		void				sendResponse(int clientSocket);
+		std::string			chunkResponse();
 
 		void				httpMethodDelete(Request const& req);
 		void				httpMethodGet(Request const& req);

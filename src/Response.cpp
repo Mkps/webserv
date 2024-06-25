@@ -129,7 +129,8 @@ std::string Response::getResponseMsg() {
 }
 
 void Response::setBody(std::string const &filename) {
-  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream file(filename.c_str(),
+                     std::ios::in | std::ios::binary | std::ios::ate);
   std::ifstream::pos_type file_size = file.tellg();
   file.seekg(0, std::ios::beg);
 
@@ -169,15 +170,30 @@ std::string Response::findContentType() {
   return "text/plain";
 }
 
-inline void sendStr(int clientSocket, std::string const &str) {
-  send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
+inline std::string to_hex(size_t value) {
+  std::ostringstream oss(std::ios::binary);
+  oss << std::hex << value;
+  return oss.str();
+}
+inline int sendStr(int clientSocket, std::string const &str) {
+  return send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
+}
+inline int sendChunk(int clientSocket, std::string const &chunk) {
+  int tmp = 0;
+  std::string size = to_hex(chunk.size()) + "\r\n";
+  std::string chunkMsg = chunk + "\r\n";
+  std::cout << "size" << size << std::endl;
+  tmp += send(clientSocket, size.c_str(), strlen(size.c_str()), 0);
+  std::cout << "chunk" << chunkMsg << std::endl;
+  tmp += send(clientSocket, chunkMsg.c_str(), strlen(chunkMsg.c_str()), 0);
+  return tmp;
 }
 void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date());
   setHeader("Content-Length", "42");
   setHeader("Content-Type", "text/plain");
   setHeader("Connection", "close");
-  setHeader("Charset", "UTF-8");
+//  setHeader("Charset", "UTF-8");
   setHeader("Server", "webserv/0.1");
 }
 
@@ -186,22 +202,54 @@ void Response::clear() {
   _responseHeaders.clear();
   setDefaultHeaders();
 }
+std::string Response::chunkResponse() {
+  const size_t chunk_size = 5; // Adjust this size as needed for the example
+  std::string chunked_body;
+
+  if (_offset < _body.size()) {
+    size_t len = std::min(chunk_size, _body.size() - _offset);
+    std::string chunk = _body.substr(_offset, len);
+    _offset += len;
+	return chunk;
+  } else {
+      chunked_body = "0\r\n\r\n";
+  }
+  return chunked_body;
+}
 void Response::sendResponse(int clientSocket) {
-   //std::string res = writeHeader() + _body + "\r\n\r\n";
-    std::ostringstream res;
-	res << writeHeader() <<  _body;
-   // res << "HTTP/1.1 200 OK\r\n"
-   //          << "Date: " << get_current_date() << "\r\n"
-   //          << "Content-Type: text/html; charset=UTF-8\r\n"
-   //          << "Content-Length: " << _body.size() << "\r\n"
-   //          << "Connection: close\r\n"  // Close the connection after sending the response
-   //          << "Server: MyServer/1.0\r\n"
-   //          << "\r\n"
-   //          << _body;
-  std::cout << "response is >>>" << std::endl;
-  if (getHeaderValue("Content-Type") == "text/html")
-	  std::cout << writeHeader()<< std::endl;
-  sendStr(clientSocket, res.str());
+  // std::string res = writeHeader() + _body + "\r\n\r\n";
+  std::ostringstream res;
+  _offset = 0;
+  _bytes_sent = 0;
+  if (_body.size() > 90) {
+    setHeader("Transfer-Encoding", "chunked");
+    setHeader("Connection", "keep-alive");
+    res << writeHeader();
+    sendStr(clientSocket, res.str());
+    res.clear();
+    while (_offset < _body.size()) {
+		std::string chunk = chunkResponse();
+      _bytes_sent += sendChunk(clientSocket, chunk);
+    }
+	std::string chunk = chunkResponse();
+	sendStr(clientSocket, chunk);
+  } else {
+    std::cout << "body is " << _body << std::endl;
+    res << writeHeader() << _body << "\r\n\r\n";
+    // res << "HTTP/1.1 200 OK\r\n"
+    //          << "Date: " << get_current_date() << "\r\n"
+    //          << "Content-Type: text/html; charset=UTF-8\r\n"
+    //          << "Content-Length: " << _body.size() << "\r\n"
+    //          << "Connection: close\r\n"  // Close the connection after
+    //          sending the response
+    //          << "Server: MyServer/1.0\r\n"
+    //          << "\r\n"
+    //          << _body;
+    std::cout << "response is >>> " << res.str() << std::endl;
+    if (getHeaderValue("Content-Type") == "text/html")
+      std::cout << writeHeader() << std::endl;
+    sendStr(clientSocket, res.str());
+  }
 }
 
 void Response::httpMethodDelete(Request const &req) {
