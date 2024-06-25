@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/18 15:30:25 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/19 17:49:57 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/06/25 11:40:53 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -176,10 +176,9 @@ inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
 void Response::sendResponse(int clientSocket) {
-  std::string ret = writeHeader() + _body + "\r\n\r\n";
+  std::string res = writeHeader() + _body + "\r\n\r\n";
   std::cout << "response is >>>" << std::endl;
-  sendStr(clientSocket, ret);
-//  sendStr(clientSocket, _body);
+  sendStr(clientSocket, res);
 }
 
 void Response::httpMethodDelete(Request const &req) {

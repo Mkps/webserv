@@ -37,6 +37,8 @@ size_t	Client::getId() const { return _id; }
 
 int	Client::getFd() const { return _fd; }
 
+std::string	Client::getRequest() const { return _request; }
+
 void Client::clearRequest(void) { _request.clear(); }
 
 int	Client::recvRequest(void)
@@ -45,6 +47,7 @@ int	Client::recvRequest(void)
 	int		ret;
 
 	ret = BUFFER_SIZE;
+	_request.clear();
 	while (ret == BUFFER_SIZE)
 	{
 		ret = recv(_fd, buffer, BUFFER_SIZE, 0);

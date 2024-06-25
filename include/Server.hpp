@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:14:33 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/22 14:07:04 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 10:59:36 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 
 #include <string>
 #include <vector>
+
+#define NEW_CLIENT_CONNECTED 2
 
 typedef struct pollfd s_pollfd;
 
