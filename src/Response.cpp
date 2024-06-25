@@ -180,20 +180,27 @@ inline int sendStr(int clientSocket, std::string const &str) {
 }
 inline int sendChunk(int clientSocket, std::string const &chunk) {
   int tmp = 0;
+  int ret = 0;
   std::string size = to_hex(chunk.size()) + "\r\n";
   std::string chunkMsg = chunk + "\r\n";
-  std::cout << "size" << size << std::endl;
-  tmp += send(clientSocket, size.c_str(), strlen(size.c_str()), 0);
-  std::cout << "chunk" << chunkMsg << std::endl;
-  tmp += send(clientSocket, chunkMsg.c_str(), strlen(chunkMsg.c_str()), 0);
-  return tmp;
+  tmp = send(clientSocket, size.c_str(), size.size(), 0);
+  if ((size_t)tmp != size.size()){
+  	std::cout << "size " << tmp << std::endl;
+  }
+  ret += tmp;
+  tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
+  if ((size_t)tmp != chunkMsg.size()){
+  	std::cout << "chunk " << tmp << std::endl;
+  }
+  ret += tmp;
+  return ret;
 }
 void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date());
   setHeader("Content-Length", "42");
   setHeader("Content-Type", "text/plain");
   setHeader("Connection", "close");
-//  setHeader("Charset", "UTF-8");
+  setHeader("Charset", "UTF-8");
   setHeader("Server", "webserv/0.1");
 }
 
