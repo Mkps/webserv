@@ -37,6 +37,8 @@ size_t	Client::getId() const { return _id; }
 
 int	Client::getFd() const { return _fd; }
 
+std::string	Client::getRequest() const { return _request; }
+
 void Client::clearRequest(void) { _request.clear(); }
 
 int	Client::recvRequest(void)
@@ -77,5 +79,5 @@ std::ostream & operator<<(std::ostream & o, Client const & r)
 void	Client::handleResponse(){
 	_res.processRequest(_req);
 	_res.sendResponse(_fd);
-	return (0);
+	// return (0);
 }

@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/22 14:10:25 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 10:59:46 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -159,7 +159,7 @@ int Server::_handleNewConnection(void)
 		ptr = _createClient(_sockets[i]);
 		if (!ptr)
 			return (EXIT_FAILURE);
-		break;
+		return (NEW_CLIENT_CONNECTED);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -232,19 +232,24 @@ void Server::_handleClientResponse(Client *client)
 void Server::run()
 {
 	int		ret = 0;
+	int		timeout = 0;
 
 	_instance = this;
 	signal(SIGINT, Server::signalHandler);
 	while (true)
 	{
-		ret = poll(_pollfds.data(), _pollfds.size(), -1);
+		timeout = 3000 * _pollfds.size();
+		ret = poll(_pollfds.data(), _pollfds.size(), timeout);
 		if (ret == -1)
 		{
 			std::cerr << "Poll failed" << std::endl;
 			break;
 		}
-		if (_handleNewConnection() == EXIT_FAILURE)
+		ret = _handleNewConnection();
+		if (ret == EXIT_FAILURE)
 			break;
+		else if (ret == NEW_CLIENT_CONNECTED)
+			continue;
 		if (_handleClientsEvent() == EXIT_FAILURE)
 			break;
 	}
