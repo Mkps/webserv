@@ -181,14 +181,9 @@ void Response::setDefaultHeaders() {
   setHeader("Server", "webserv/0.1");
 }
 
-inline void	clearMap(hashmap &map) {
-	for (hashmap::iterator it = map.begin(); it != map.end(); ++it) {
-		map.erase(it);
-	}
-}
 void Response::clear() {
   // Should unset the map
-  clearMap(_responseHeaders);
+  _responseHeaders.clear();
   setDefaultHeaders();
 }
 void Response::sendResponse(int clientSocket) {
