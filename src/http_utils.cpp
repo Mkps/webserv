@@ -1,47 +1,56 @@
 #include "http_utils.hpp"
 
+#include <iostream>
 #include <map>
 #include <sstream>
 #include <sys/stat.h>
-#include <iostream>
 
-int	fileStatus(const std::string & path)
-{
-	struct stat buf;
-	if (stat( path.c_str(), &buf) == 0)
-	{
-		if (buf.st_mode & S_IFDIR)
-			return FILE_DIR;
-		else if (buf.st_mode & S_IFREG)
-			return FILE_REG;
-		else
-			return FILE_ELS;
-	}
-	else
-		return FILE_NOT;
+int fileStatus(const std::string &path) {
+  struct stat buf;
+  if (stat(path.c_str(), &buf) == 0) {
+    if (buf.st_mode & S_IFDIR)
+      return FILE_DIR;
+    else if (buf.st_mode & S_IFREG)
+      return FILE_REG;
+    else
+      return FILE_ELS;
+  } else
+    return FILE_NOT;
 }
 
-int	getFileSize(const std::string & path)
-{
-	struct stat buf;
-	if (stat( path.c_str(), &buf) == 0)
-		return buf.st_size;
-	return FILE_NOT;
+int getFileSize(const std::string &path) {
+  struct stat buf;
+  if (stat(path.c_str(), &buf) == 0)
+    return buf.st_size;
+  return FILE_NOT;
 }
 
-template <typename T>
-std::string NumberToString ( T Number )
-{
-	std::ostringstream ss;
-	ss << Number;
-	return ss.str();
+template <typename T> std::string NumberToString(T Number) {
+  std::ostringstream ss;
+  ss << Number;
+  return ss.str();
+}
+
+std::string sizeToStr(std::string::size_type size) {
+  std::ostringstream ss;
+  ss << size;
+  return ss.str();
 }
 
 typedef std::map<std::string, std::string> hashmap;
-void showHeaders(hashmap tmp)
-{
-	for (hashmap::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
-	{
-		std::cout << "key " << it->first << " value " << it->second << std::endl;
-	}
+void showHeaders(hashmap tmp) {
+  for (hashmap::const_iterator it = tmp.begin(); it != tmp.end(); ++it) {
+    std::cout << "key " << it->first << " value " << it->second << std::endl;
+  }
+}
+
+std::string get_current_date() {
+  time_t now = time(0);
+  struct tm tm;
+  char buf[100];
+
+  gmtime_r(&now, &tm);
+  strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+
+  return std::string(buf);
 }
