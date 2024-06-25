@@ -10,6 +10,8 @@ std::string NumberToString ( T Number );
 
 int	fileStatus(const std::string & path);
 int	getFileSize(const std::string & path);
+std::string get_current_date();
+std::string sizeToStr( std::string::size_type size);
 
 
 
