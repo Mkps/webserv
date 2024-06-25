@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 14:02:24 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 14:23:18 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,10 +67,10 @@ std::vector<Client *> Server::getClients() const { return _clients; }
 
 Socket *Server::_createSocket(std::string ip, int port)
 {
-	Socket	*s = NULL;
+	Socket	*sock = NULL;
 	try
 	{
-		s = new Socket(ip, port);
+		sock = new Socket(ip, port);
 	}
 	catch (std::exception &e)
 	{
@@ -78,12 +78,16 @@ Socket *Server::_createSocket(std::string ip, int port)
 		return NULL;
 	}
 
-	s_pollfd		pollfd = {s->getFd(), POLLIN, 0};
+	s_pollfd pollfd = {
+		.fd = sock->getFd(),
+		.events = POLLIN,
+		.revents = 0
+	};
 
-	_sockets.push_back(s);
+	_sockets.push_back(sock);
 	_pollfds.push_back(pollfd);
 
-	return s;
+	return sock;
 }
 
 Client *Server::_createClient(Socket *socket)
@@ -101,7 +105,11 @@ Client *Server::_createClient(Socket *socket)
 		return NULL;
 	}
 
-	s_pollfd pollfd = {client->getFd(), POLLIN, 0};
+	s_pollfd pollfd = {
+		.fd = client->getFd(),
+		.events = POLLIN,
+		.revents = 0
+	};
 
 	_clients.push_back(client);
 	_pollfds.push_back(pollfd);
