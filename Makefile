@@ -35,7 +35,7 @@ OBJ = $(addprefix $(OBJ_DIR), $(OBJ_FILES))
 
 CC = c++ 
 
-override CFLAGS += -Wall -Wextra -Werror -std=c++98 -I$(INC_DIR)
+override CFLAGS += -g3 -Wall -Wextra -Werror -std=c++98 -I$(INC_DIR)
 
 .PHONY: all
 all: $(NAME)

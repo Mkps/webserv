@@ -23,14 +23,13 @@
 
 Response::Response() {
   // If this is used something went very wrong...
-  _statusCode = 500;
-  _body = "<!DOCTYPE "
-          "html>\n<html>\n<head>\n</head>\n<body>\n<h1>500</h1>\n<p>Internal "
-          "Server Error</p></body>\n</"
-          "html>\r\n";
+  setDefaultHeaders();
 }
 
-Response::Response(Request const &request) { (void)request; }
+Response::Response(Request const &request) {
+  (void)request;
+  setDefaultHeaders();
+}
 
 Response::~Response() {}
 
@@ -66,7 +65,7 @@ inline std::string getResponse(short status) {
   } else if (status >= 200 && status < 300) {
     if (status == 204)
       return "No Response";
-    return "Success";
+    return "OK";
   } else if (status >= 300 && status < 400) {
     return "Redirection";
   } else if (status >= 400 && status < 500) {
@@ -104,9 +103,7 @@ void Response::processRequest(Request const &req) {
     httpMethodDelete(req);
   } else {
     std::cout << "valid method but not handled?" << std::endl;
-	setStatusCode(405);
-    setHeader("content-length", "");
-    setHeader("content-type", "text/plain");
+    setStatusCode(405);
     setBodyError(_statusCode);
   }
 }
@@ -115,11 +112,11 @@ void Response::setBodyError(int status) {
 
   std::ostringstream s;
   _statusCode = status;
-  setHeader("content-length", "");
-  setHeader("content-type", "text/plain");
   s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
     << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
   _body = s.str();
+  setHeader("Content-Length", sizeToStr(_body.size()));
+  setHeader("Content-Type", "text/plain");
 }
 
 std::string Response::getResponseMsg() {
@@ -132,14 +129,14 @@ std::string Response::getResponseMsg() {
 }
 
 void Response::setBody(std::string const &filename) {
+  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type file_size = file.tellg();
+  file.seekg(0, std::ios::beg);
 
-  std::ifstream file(filename.c_str());
-  std::ostringstream s;
-  std::string line;
-  while (getline(file, line)) {
-    s << line;
-  }
-  _body = s.str();
+  std::string file_buffer;
+  file_buffer.resize(file_size);
+  file.read(&file_buffer[0], file_size);
+  _body = file_buffer;
   file.close();
 }
 
@@ -148,38 +145,63 @@ std::string Response::writeHeader() {
   s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\r\n";
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
-    s << it->first << " : " << it->second << ",\r\n";
+    s << it->first << ": " << it->second << "\r\n";
   s << "\r\n";
   return s.str();
 }
 
-std::string			Response::findContentType(){
-	size_t pos;
-	pos = _path.find_last_of(".");
-	std::string type = _path.substr(pos + 1);
-	if (type == "html")
-		return "text/html";
-	else if (type == ".css")
-		return "text/css";
-	else if (type == "js")
-		return "text/javascript";
-	else if (type == "jpeg" || type == "jpg")
-		return "image/jpeg";
-	else if (type == "png")
-		return "image/png";
-	else if (type == "bmp")
-		return "image/bmp";
-	return "text/plain";
+std::string Response::findContentType() {
+  size_t pos;
+  pos = _path.find_last_of(".");
+  std::string type = _path.substr(pos + 1);
+  if (type == "html")
+    return "text/html";
+  else if (type == "css")
+    return "text/css";
+  else if (type == "js")
+    return "text/javascript";
+  else if (type == "jpeg" || type == "jpg")
+    return "image/jpeg";
+  else if (type == "png")
+    return "image/png";
+  else if (type == "bmp")
+    return "image/bmp";
+  return "text/plain";
 }
 
 inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
+void Response::setDefaultHeaders() {
+  setHeader("Date", get_current_date());
+  setHeader("Content-Length", "42");
+  setHeader("Content-Type", "text/plain");
+  setHeader("Connection", "close");
+  setHeader("Charset", "UTF-8");
+  setHeader("Server", "webserv/0.1");
+}
+
+void Response::clear() {
+  // Should unset the map
+  _responseHeaders.clear();
+  setDefaultHeaders();
+}
 void Response::sendResponse(int clientSocket) {
-  std::string res = writeHeader() + _body + "\r\n\r\n";
+   //std::string res = writeHeader() + _body + "\r\n\r\n";
+    std::ostringstream res;
+	res << writeHeader() <<  _body;
+   // res << "HTTP/1.1 200 OK\r\n"
+   //          << "Date: " << get_current_date() << "\r\n"
+   //          << "Content-Type: text/html; charset=UTF-8\r\n"
+   //          << "Content-Length: " << _body.size() << "\r\n"
+   //          << "Connection: close\r\n"  // Close the connection after sending the response
+   //          << "Server: MyServer/1.0\r\n"
+   //          << "\r\n"
+   //          << _body;
   std::cout << "response is >>>" << std::endl;
-  std::cout << res << std::endl;
-  sendStr(clientSocket, res);
+  if (getHeaderValue("Content-Type") == "text/html")
+	  std::cout << writeHeader()<< std::endl;
+  sendStr(clientSocket, res.str());
 }
 
 void Response::httpMethodDelete(Request const &req) {
@@ -222,22 +244,22 @@ void Response::httpMethodGet(Request const &req) {
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) { // We have a valid file
-	std::ostringstream ss;
-	ss << _body.size();
-    setHeader("Content-Length", ss.str());
-    setHeader("Content-Type", findContentType());
-	setHeader("Connection", "close");
     setBody(_path);
-	std::cout << "path " << _path << " size " << ss.str() << " type " << findContentType() <<std::endl;
+    // std::ostringstream ss;
+    //  ss << _body.size();
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
+    std::cout << "path " << _path << " size " << sizeToStr(_body.size())
+              << " type " << findContentType() << std::endl;
   } else {
     setBodyError(_statusCode);
   }
 }
 inline std::string generate_filename() {
-    std::ostringstream oss;
-    time_t t = time(NULL);
-    oss << "resource_" << t;
-    return oss.str();
+  std::ostringstream oss;
+  time_t t = time(NULL);
+  oss << "resource_" << t;
+  return oss.str();
 }
 
 void Response::httpMethodPost(Request const &req) {
@@ -248,20 +270,18 @@ void Response::httpMethodPost(Request const &req) {
   if (isCGI) {
     std::cout << "Do cgi stuff here" << std::endl;
   } else if (_statusCode == 200) {
-    std::cout << "If not cgi but post" << std::endl;
     std::ofstream outFile;
-	if (fileStatus(path) == FILE_DIR)
-		path += generate_filename();
-    outFile.open(path.c_str(), std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
+    if (fileStatus(path) == FILE_DIR)
+      path += generate_filename();
+    outFile.open(path.c_str(), std::ios::out | std::ios::binary |
+                                   std::ios::ate | std::ios::app);
     if (!outFile.good()) {
       _statusCode = 500;
-	  std::cout << "badfile" << std::endl;
       return;
     }
-	outFile.write(req.getRequestBody().c_str(), req.getRequestBody().size());
-	std::cout << "goodfile " << _statusCode << std::endl;
-	_statusCode = 204;
-	return ;
+    outFile.write(req.getRequestBody().c_str(), req.getRequestBody().size());
+    _statusCode = 204;
+    return;
   } else {
     setBodyError(_statusCode);
   }

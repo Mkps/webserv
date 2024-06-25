@@ -42,7 +42,9 @@ class Response {
 		hashmap const &		getHeader() const;
 		std::string const &	getHeaderValue(std::string const & key) const;
 		void				setHeader(std::string const & key, std::string const & value);
+		void				setDefaultHeaders();
 
+		void				clear();
 		std::string			writeHeader();
 		void				processRequest(Request const & req);
 		void				sendResponse(int clientSocket);
