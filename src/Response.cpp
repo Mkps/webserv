@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/18 15:30:25 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/25 11:35:33 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 11:40:53 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -150,7 +150,6 @@ std::string Response::writeHeader() {
        it != _responseHeaders.end(); ++it)
     s << it->first << " : " << it->second << ",\r\n";
   s << "\r\n";
-  std::cout << s.str() << std::endl;
   return s.str();
 }
 
@@ -177,12 +176,9 @@ inline void sendStr(int clientSocket, std::string const &str) {
   send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
 }
 void Response::sendResponse(int clientSocket) {
-  std::string httpResponse = writeHeader() + _body;
-  // sendStr(clientSocket, writeHeader());
-  // sendStr(clientSocket, _body);
-  std::cout << "Sending response" << std::endl;
-  std::cout << httpResponse << std::endl;
-  sendStr(clientSocket, httpResponse);
+  std::string res = writeHeader() + _body + "\r\n\r\n";
+  std::cout << "response is >>>" << std::endl;
+  sendStr(clientSocket, res);
 }
 
 void Response::httpMethodDelete(Request const &req) {
@@ -227,7 +223,7 @@ void Response::httpMethodGet(Request const &req) {
   } else if (_statusCode == 200) { // We have a valid file
 	std::ostringstream ss;
 	ss << _body.size();
-    setHeader("Content-Length", "");
+    setHeader("Content-Length", ss.str());
     setHeader("Content-Type", findContentType());
     setBody(_path);
 	std::cout << "path " << _path << " size " << ss.str() << " type " << findContentType() <<std::endl;
