@@ -225,6 +225,7 @@ void Response::httpMethodGet(Request const &req) {
 	ss << _body.size();
     setHeader("Content-Length", ss.str());
     setHeader("Content-Type", findContentType());
+	setHeader("Connection", "close");
     setBody(_path);
 	std::cout << "path " << _path << " size " << ss.str() << " type " << findContentType() <<std::endl;
   } else {
