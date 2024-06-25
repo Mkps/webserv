@@ -65,7 +65,7 @@ inline std::string getResponse(short status) {
   } else if (status >= 200 && status < 300) {
     if (status == 204)
       return "No Response";
-    return "Success";
+    return "OK";
   } else if (status >= 300 && status < 400) {
     return "Redirection";
   } else if (status >= 400 && status < 500) {
@@ -129,14 +129,14 @@ std::string Response::getResponseMsg() {
 }
 
 void Response::setBody(std::string const &filename) {
+  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type file_size = file.tellg();
+  file.seekg(0, std::ios::beg);
 
-  std::ifstream file(filename.c_str());
-  std::ostringstream s;
-  std::string line;
-  while (getline(file, line)) {
-    s << line;
-  }
-  _body = s.str();
+  std::string file_buffer;
+  file_buffer.resize(file_size);
+  file.read(&file_buffer[0], file_size);
+  _body = file_buffer;
   file.close();
 }
 
@@ -145,7 +145,7 @@ std::string Response::writeHeader() {
   s << "HTTP/1.1 " << _statusCode << " " << getResponse(_statusCode) << "\r\n";
   for (hashmap::const_iterator it = _responseHeaders.begin();
        it != _responseHeaders.end(); ++it)
-    s << it->first << " : " << it->second << ",\r\n";
+    s << it->first << ": " << it->second << "\r\n";
   s << "\r\n";
   return s.str();
 }
@@ -176,7 +176,7 @@ void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date());
   setHeader("Content-Length", "42");
   setHeader("Content-Type", "text/plain");
-  setHeader("Connection", "keep-alive");
+  setHeader("Connection", "close");
   setHeader("Charset", "UTF-8");
   setHeader("Server", "webserv/0.1");
 }
@@ -187,10 +187,21 @@ void Response::clear() {
   setDefaultHeaders();
 }
 void Response::sendResponse(int clientSocket) {
-  std::string res = writeHeader() + _body + "\r\n\r\n";
+   //std::string res = writeHeader() + _body + "\r\n\r\n";
+    std::ostringstream res;
+	res << writeHeader() <<  _body;
+   // res << "HTTP/1.1 200 OK\r\n"
+   //          << "Date: " << get_current_date() << "\r\n"
+   //          << "Content-Type: text/html; charset=UTF-8\r\n"
+   //          << "Content-Length: " << _body.size() << "\r\n"
+   //          << "Connection: close\r\n"  // Close the connection after sending the response
+   //          << "Server: MyServer/1.0\r\n"
+   //          << "\r\n"
+   //          << _body;
   std::cout << "response is >>>" << std::endl;
-  std::cout << res << std::endl;
-  sendStr(clientSocket, res);
+  if (getHeaderValue("Content-Type") == "text/html")
+	  std::cout << writeHeader()<< std::endl;
+  sendStr(clientSocket, res.str());
 }
 
 void Response::httpMethodDelete(Request const &req) {
