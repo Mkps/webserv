@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 11:36:03 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/06/25 12:21:47 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -186,6 +186,7 @@ int Server::_handleClientsEvent(void)
 		if (client->getRequest().empty())
 			continue;
 		_handleClientResponse(client);
+		_deleteClient(client);
 	}
 	return (EXIT_SUCCESS);
 }
