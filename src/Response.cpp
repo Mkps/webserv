@@ -19,6 +19,8 @@
 #include <iostream>
 #include <sstream>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 
 Response::Response() {
@@ -184,13 +186,13 @@ inline int sendChunk(int clientSocket, std::string const &chunk) {
   std::string size = to_hex(chunk.size()) + "\r\n";
   std::string chunkMsg = chunk + "\r\n";
   tmp = send(clientSocket, size.c_str(), size.size(), 0);
-  if ((size_t)tmp != size.size()){
-  	std::cout << "size " << tmp << std::endl;
+  if ((size_t)tmp != size.size()) {
+    std::cout << "size " << tmp << std::endl;
   }
   ret += tmp;
   tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
-  if ((size_t)tmp != chunkMsg.size()){
-  	std::cout << "chunk " << tmp << std::endl;
+  if ((size_t)tmp != chunkMsg.size()) {
+    std::cout << "chunk " << tmp << std::endl;
   }
   ret += tmp;
   return ret;
@@ -217,9 +219,9 @@ std::string Response::chunkResponse() {
     size_t len = std::min(chunk_size, _body.size() - _offset);
     std::string chunk = _body.substr(_offset, len);
     _offset += len;
-	return chunk;
+    return chunk;
   } else {
-      chunked_body = "0\r\n\r\n";
+    chunked_body = "0\r\n\r\n";
   }
   return chunked_body;
 }
@@ -235,11 +237,11 @@ void Response::sendResponse(int clientSocket) {
     sendStr(clientSocket, res.str());
     res.clear();
     while (_offset < _body.size()) {
-		std::string chunk = chunkResponse();
+      std::string chunk = chunkResponse();
       _bytes_sent += sendChunk(clientSocket, chunk);
     }
-	std::string chunk = chunkResponse();
-	sendStr(clientSocket, chunk);
+    std::string chunk = chunkResponse();
+    sendStr(clientSocket, chunk);
   } else {
     std::cout << "body is " << _body << std::endl;
     res << writeHeader() << _body << "\r\n\r\n";
@@ -274,6 +276,75 @@ void Response::httpMethodDelete(Request const &req) {
   else
     setBody("");
 }
+
+inline hashmap setEnvForCGI(std::string const &script, std::string const &query)
+{
+	hashmap tmp;
+    tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
+    tmp["QUERY_STRING"] = query;
+    tmp["REQUEST_METHOD"] = "GET";
+    tmp["SCRIPT_FILENAME"] = script;
+    tmp["SERVER_PROTOCOL"] =  "HTTP/1.1";
+    tmp["REMOTE_ADDR"] = "127.0.0.1";
+	return tmp;	
+}
+
+inline char** hashmapToChrArray(hashmap const &map) {
+	char **ret;
+	ret = new char*[map.size() + 1];
+	ret[map.size()] = NULL;
+	int i = -1;
+	for (hashmap::const_iterator it = map.begin() ; it != map.end(); ++it) {
+		std::string tmp = it->first + "=" + it->second;
+		ret[++i] = new char[tmp.size() + 1];
+		ret[tmp.size()] = 0;
+		ret[i] = strcpy(ret[i], tmp.c_str()); 
+	}
+	return ret;
+}
+void Response::handleCGI(int clientSocket, std::string const &script,
+                         std::string const &query) {
+  (void)clientSocket;
+  int pipefd[2];
+  if (pipe(pipefd) == -1) {
+    std::cerr << "pipe failed" << std::endl;
+    return;
+  }
+  pid_t pid = fork();
+  if (pid < 0) {
+    std::cerr << "Fork failed" << std::endl;
+    return;
+  }
+  if (!pid) {
+    close(pipefd[0]);
+	hashmap env;
+	env = setEnvForCGI(script, query);
+    dup2(pipefd[1], STDOUT_FILENO);
+    close(pipefd[1]);
+	std::cerr<< "script " << script;
+	char **envv = hashmapToChrArray(env);
+	char *script_array[2];
+	script_array[1] = NULL;
+	script_array[0] = new char[script.size() + 1];
+	script_array[0][script.size()] = 0;
+	script_array[0] = strcpy(script_array[0],script.c_str());
+    execve(script.c_str(), script_array, envv);
+	delete envv;
+    _exit(127);
+  } else {
+    close(pipefd[1]);
+    waitpid(pid, NULL, 0);
+    char buffer[4096];
+    _body = "";
+    ssize_t n;
+    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
+      _body.append(buffer, n);
+    }
+    close(pipefd[0]);
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
+  }
+}
 void Response::httpMethodGet(Request const &req) {
   (void)req; // req will be needed for the cgi(env + headers)
   std::string myStr[] = {"index", "index.html"};
@@ -295,13 +366,17 @@ void Response::httpMethodGet(Request const &req) {
   }
   if (_statusCode == 200)
     _path = path;
-  bool isCGI = 0;
-  if (isCGI) {
-    std::cout << "Do cgi stuff here" << std::endl;
+  if (req.isCGI()) {
+    std::string script_path = "." + req.getFilePath();
+    std::string query;
+    size_t query_pos = script_path.find("?");
+    if (query_pos != std::string::npos) {
+      query = script_path.substr(query_pos + 1);
+      script_path = script_path.substr(0, query_pos);
+    }
+    handleCGI(0, script_path, query);
   } else if (_statusCode == 200) { // We have a valid file
     setBody(_path);
-    // std::ostringstream ss;
-    //  ss << _body.size();
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
     std::cout << "path " << _path << " size " << sizeToStr(_body.size())

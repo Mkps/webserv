@@ -52,6 +52,7 @@ class Response {
 		void				sendResponse(int clientSocket);
 		std::string			chunkResponse();
 
+		void				handleCGI(int clientSocket, std::string const & script, std::string const & query);
 		void				httpMethodDelete(Request const& req);
 		void				httpMethodGet(Request const& req);
 		void				httpMethodPost(Request const& req);
