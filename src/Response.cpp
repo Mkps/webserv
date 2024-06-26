@@ -80,6 +80,8 @@ inline std::string getResponse(short status) {
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
+    if (status == 502)
+        return "Bad Gateway";
     return "Server Error";
   } else
     return "Bad Request";
@@ -286,7 +288,6 @@ inline hashmap setEnvForCGI(std::string const &script, std::string const &query)
     tmp["SCRIPT_FILENAME"] = script;
     tmp["SERVER_PROTOCOL"] =  "HTTP/1.1";
     tmp["REMOTE_ADDR"] = "127.0.0.1";
-    std::cerr << "query is " << query << std::endl;
 	return tmp;	
 }
 
