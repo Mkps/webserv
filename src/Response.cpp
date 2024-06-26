@@ -212,7 +212,7 @@ void Response::clear() {
   setDefaultHeaders();
 }
 std::string Response::chunkResponse() {
-  const size_t chunk_size = 5; // Adjust this size as needed for the example
+  const size_t chunk_size = 1024; // Adjust this size as needed for the example
   std::string chunked_body;
 
   if (_offset < _body.size()) {
@@ -230,7 +230,7 @@ void Response::sendResponse(int clientSocket) {
   std::ostringstream res;
   _offset = 0;
   _bytes_sent = 0;
-  if (_body.size() > 90) {
+  if (_body.size() > 1024) {
     setHeader("Transfer-Encoding", "chunked");
     setHeader("Connection", "keep-alive");
     res << writeHeader();
@@ -286,6 +286,7 @@ inline hashmap setEnvForCGI(std::string const &script, std::string const &query)
     tmp["SCRIPT_FILENAME"] = script;
     tmp["SERVER_PROTOCOL"] =  "HTTP/1.1";
     tmp["REMOTE_ADDR"] = "127.0.0.1";
+    std::cerr << "query is " << query << std::endl;
 	return tmp;	
 }
 
@@ -297,23 +298,23 @@ inline char** hashmapToChrArray(hashmap const &map) {
 	for (hashmap::const_iterator it = map.begin() ; it != map.end(); ++it) {
 		std::string tmp = it->first + "=" + it->second;
 		ret[++i] = new char[tmp.size() + 1];
-		ret[tmp.size()] = 0;
+		ret[i][tmp.size()] = 0;
 		ret[i] = strcpy(ret[i], tmp.c_str()); 
 	}
 	return ret;
 }
-void Response::handleCGI(int clientSocket, std::string const &script,
+int Response::handleCGI(int clientSocket, std::string const &script,
                          std::string const &query) {
   (void)clientSocket;
   int pipefd[2];
   if (pipe(pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
-    return;
+    return 500;
   }
   pid_t pid = fork();
   if (pid < 0) {
     std::cerr << "Fork failed" << std::endl;
-    return;
+    return 500;
   }
   if (!pid) {
     close(pipefd[0]);
@@ -329,11 +330,19 @@ void Response::handleCGI(int clientSocket, std::string const &script,
 	script_array[0][script.size()] = 0;
 	script_array[0] = strcpy(script_array[0],script.c_str());
     execve(script.c_str(), script_array, envv);
-	delete envv;
+    for (int i = 0; envv[i]; ++i){
+        std::cerr << "env i " << i << " >>>" << envv[i] << std::endl;
+        delete[] envv[i];
+    }
+	delete[] envv;
     _exit(127);
   } else {
     close(pipefd[1]);
-    waitpid(pid, NULL, 0);
+    int status;
+    if (waitpid(pid, &status, 0) == -1)
+      return 500;
+    if (WIFEXITED(status) && WEXITSTATUS(status))
+      return 502;
     char buffer[4096];
     _body = "";
     ssize_t n;
@@ -344,6 +353,7 @@ void Response::handleCGI(int clientSocket, std::string const &script,
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
   }
+  return 200;
 }
 void Response::httpMethodGet(Request const &req) {
   (void)req; // req will be needed for the cgi(env + headers)
@@ -351,6 +361,16 @@ void Response::httpMethodGet(Request const &req) {
   std::vector<std::string> tryFiles;
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
+  std::string script_path, query;
+  if (req.isCGI()) {
+    script_path = path;
+    size_t query_pos = script_path.find("?");
+    if (query_pos != std::string::npos) {
+      query = script_path.substr(query_pos + 1);
+      script_path = script_path.substr(0, query_pos);
+    }
+    path = script_path;
+  }
   tryFiles.assign(myStr, myStr + 2);
   if (fileStatus(path) == FILE_DIR) {
     for (std::vector<std::string>::const_iterator it = tryFiles.begin();
@@ -366,15 +386,10 @@ void Response::httpMethodGet(Request const &req) {
   }
   if (_statusCode == 200)
     _path = path;
-  if (req.isCGI()) {
-    std::string script_path = "." + req.getFilePath();
-    std::string query;
-    size_t query_pos = script_path.find("?");
-    if (query_pos != std::string::npos) {
-      query = script_path.substr(query_pos + 1);
-      script_path = script_path.substr(0, query_pos);
-    }
-    handleCGI(0, script_path, query);
+  if (_statusCode == 200 && req.isCGI()) {
+    int ret = handleCGI(0, script_path, query);
+    if (ret != 200)
+        setBodyError(ret);
   } else if (_statusCode == 200) { // We have a valid file
     setBody(_path);
     setHeader("Content-Length", sizeToStr(_body.size()));
