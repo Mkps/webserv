@@ -20,6 +20,7 @@ OBJ_DIR = build/
 
 SRC_FILES = main.cpp \
 			Socket.cpp \
+			CgiHandler.cpp \
 			Client.cpp \
 			Server.cpp \
 			Request.cpp \
