@@ -286,18 +286,16 @@ void Response::httpMethodGet(Request const &req) {
     path = script_path;
   }
   tryFiles.assign(myStr, myStr + 2);
-  std::cout << "filestatus for " << path << " is " << fileStatus(path) << std::endl;
   if (fileStatus(path) == FILE_DIR) {
     for (std::vector<std::string>::const_iterator it = tryFiles.begin();
          it != tryFiles.end(); ++it) {
       std::string filePath(path + *it);
-      std::cout << "trying " << filePath << std::endl;
       if (fileStatus(filePath) == FILE_REG) {
-          _statusCode = 200;
-          path = filePath;
-          break;
-      } else 
-          setBodyError(404);
+        _statusCode = 200;
+        path = filePath;
+        break;
+      } else
+        setBodyError(404);
     }
   } else if (fileStatus(path) == FILE_NOT) {
     setBodyError(404);
@@ -330,12 +328,27 @@ inline std::string generate_filename() {
 }
 
 void Response::httpMethodPost(Request const &req) {
-  (void)req; // will probably need it... Maybe
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
-  bool isCGI = 0;
-  if (isCGI) {
-    std::cout << "Do cgi stuff here" << std::endl;
+  std::string script_path, query;
+  if (req.isCGI() && _statusCode == 200) {
+    script_path = path;
+    size_t query_pos = script_path.find("?");
+    if (query_pos != std::string::npos) {
+      query = script_path.substr(query_pos + 1);
+      script_path = script_path.substr(0, query_pos);
+    }
+    path = script_path;
+    CgiHandler cgi;
+    cgi.setEnvPost(script_path, query);
+    cgi.setRequestBody(req.getRequestBody());
+    int ret = cgi.handlePost();
+    if (ret != 200)
+      setBodyError(ret);
+    else
+      _body = cgi.body();
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
   } else if (_statusCode == 200) {
     std::ofstream outFile;
     if (fileStatus(path) == FILE_DIR)
