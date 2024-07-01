@@ -23,10 +23,12 @@ private:
   std::string _qData;
   std::string _script;
   std::string _body;
+  std::string _requestBody;
 
   hashmap _setEnvGet(const std::string &script, const std::string &query);
-  char **_setEnvPost();
+  hashmap _setEnvPost(const std::string &script, const std::string &query);
   void _execCGIGet();
+  void _execCGIPost();
 
 public:
   CgiHandler();
@@ -37,9 +39,10 @@ public:
 
   void setEnvGet(std::string const &script, std::string const &query);
   void setEnvPost(std::string const &script, std::string const &query);
+  void setRequestBody(std::string const &requestbody);
   void setScript(std::string const &script);
   void setQueryData(std::string const &qData);
-  std::string const & body() const;
+  std::string const &body() const;
   int handleGet();
   int handlePost();
 };

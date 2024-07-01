@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -45,7 +46,17 @@ inline char **hashmapToChrArray(hashmap const &map) {
   return ret;
 }
 
-char **CgiHandler::_setEnvPost() { return NULL; }
+hashmap CgiHandler::_setEnvPost(const std::string &script,
+                                const std::string &query) {
+  hashmap tmp;
+  tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
+  tmp["QUERY_STRING"] = query;
+  tmp["REQUEST_METHOD"] = "POST";
+  tmp["SCRIPT_FILENAME"] = script;
+  tmp["SERVER_PROTOCOL"] = "HTTP/1.1";
+  tmp["REMOTE_ADDR"] = "127.0.0.1";
+  return tmp;
+}
 
 // Public Member Functions
 CgiHandler::CgiHandler() { _envv = NULL; }
@@ -112,7 +123,7 @@ int CgiHandler::handleGet() {
       return 502;
     char buffer[4096];
     _body = "";
-    ssize_t n;
+    size_t n;
     while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
       _body.append(buffer, n);
     }
@@ -123,8 +134,73 @@ int CgiHandler::handleGet() {
 
 void setScript(std::string const &script);
 void setQueryData(std::string const &qData);
-void setEnvPost(std::string const &script, std::string const &query);
-int CgiHandler::handlePost() { return 0; }
+void CgiHandler::setEnvPost(std::string const &script, std::string const &query) {
+  _qData = query;
+  _script = script;
+}
+void CgiHandler::_execCGIPost() {
+  hashmap env;
+  env = _setEnvGet(_script, _qData);
+  _envv = hashmapToChrArray(env);
+  char *script_array[2];
+  script_array[1] = NULL;
+  script_array[0] = new char[_script.size() + 1];
+  script_array[0][_script.size()] = 0;
+  script_array[0] = strcpy(script_array[0], _script.c_str());
+  std::cout << "executing " << _script << std::endl;
+  if (access(_script.c_str(), F_OK | X_OK)) {
+      exit(126);
+  }
+  int ret = execve(_script.c_str(), script_array, _envv);
+  std::cout << ret << std::endl;
+  exit(ret);
+}
+int CgiHandler::handlePost() { 
+    int stdinPipe[2];
+    int stdoutPipe[2];
+
+    if (pipe(stdinPipe) != 0 || pipe(stdoutPipe) != 0) {
+        std::cerr << "Pipe failed" << std::endl;
+        return 500;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+        std::cerr << "Fork failed" << std::endl;
+        return 500;
+    }
+
+    if (pid == 0) {
+        // Child process
+        close(stdinPipe[1]);
+        dup2(stdinPipe[0], STDIN_FILENO);
+        close(stdinPipe[0]);
+        close(stdoutPipe[0]);
+        dup2(stdoutPipe[1], STDOUT_FILENO);
+        close(stdoutPipe[1]);
+        _execCGIPost();
+    } else {
+        // Parent process
+        close(stdinPipe[0]);
+        write(stdinPipe[1], _requestBody.c_str(), _requestBody.size());
+        close(stdinPipe[1]);
+
+        close(stdoutPipe[1]);
+        std::string result;
+        char buffer[1024];
+        _body = "";
+        int bytesRead;
+        while ((bytesRead = read(stdoutPipe[0], buffer, sizeof(buffer))) > 0) {
+            _body.append(buffer, bytesRead);
+        }
+        close(stdoutPipe[0]);
+
+        int status;
+        waitpid(pid, &status, 0);
+        std::cout <<  "status is " << WEXITSTATUS(status) << std::endl;
+    }
+    return 200;
+}
 
 // ### Getters/Setters ###/
 std::string const &CgiHandler::body() const { return _body; }
+void CgiHandler::setRequestBody(std::string const &requestbody) { _requestBody = requestbody;}
