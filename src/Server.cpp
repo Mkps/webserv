@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 11:36:03 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/02 00:40:33 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,13 @@
 #include <signal.h>
 
 Server	*Server::_instance = NULL;
+size_t	Server::_nbrOFServ = 1;
 
-Server::Server(std::string config)
+Server::Server(std::string config):
+_id(Server::_nbrOFServ),
+_config(config, this->_id)
 {
-	(void)config;
+	Server::_nbrOFServ++;
 	std::cout << "Supposed to open the config here" << std::endl;
 	void	*ptr = NULL;
 
@@ -47,6 +50,7 @@ Server::Server(std::string config)
 
 Server::~Server(void)
 {
+	Server::_nbrOFServ--;
 	for (size_t i = 0; i < _sockets.size(); i++)
 	{
 		delete _sockets[i];
