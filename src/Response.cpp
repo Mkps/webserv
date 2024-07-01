@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "Response.hpp"
+#include "CgiHandler.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -81,7 +82,7 @@ inline std::string getResponse(short status) {
       return "Client Error";
   } else if (status >= 500 && status < 600) {
     if (status == 502)
-        return "Bad Gateway";
+      return "Bad Gateway";
     return "Server Error";
   } else
     return "Bad Request";
@@ -209,7 +210,6 @@ void Response::setDefaultHeaders() {
 }
 
 void Response::clear() {
-  // Should unset the map
   _responseHeaders.clear();
   setDefaultHeaders();
 }
@@ -247,16 +247,6 @@ void Response::sendResponse(int clientSocket) {
   } else {
     std::cout << "body is " << _body << std::endl;
     res << writeHeader() << _body << "\r\n\r\n";
-    // res << "HTTP/1.1 200 OK\r\n"
-    //          << "Date: " << get_current_date() << "\r\n"
-    //          << "Content-Type: text/html; charset=UTF-8\r\n"
-    //          << "Content-Length: " << _body.size() << "\r\n"
-    //          << "Connection: close\r\n"  // Close the connection after
-    //          sending the response
-    //          << "Server: MyServer/1.0\r\n"
-    //          << "\r\n"
-    //          << _body;
-    std::cout << "response is >>> " << res.str() << std::endl;
     if (getHeaderValue("Content-Type") == "text/html")
       std::cout << writeHeader() << std::endl;
     sendStr(clientSocket, res.str());
@@ -279,83 +269,6 @@ void Response::httpMethodDelete(Request const &req) {
     setBody("");
 }
 
-inline hashmap setEnvForCGI(std::string const &script, std::string const &query)
-{
-	hashmap tmp;
-    tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
-    tmp["QUERY_STRING"] = query;
-    tmp["REQUEST_METHOD"] = "GET";
-    tmp["SCRIPT_FILENAME"] = script;
-    tmp["SERVER_PROTOCOL"] =  "HTTP/1.1";
-    tmp["REMOTE_ADDR"] = "127.0.0.1";
-	return tmp;	
-}
-
-inline char** hashmapToChrArray(hashmap const &map) {
-	char **ret;
-	ret = new char*[map.size() + 1];
-	ret[map.size()] = NULL;
-	int i = -1;
-	for (hashmap::const_iterator it = map.begin() ; it != map.end(); ++it) {
-		std::string tmp = it->first + "=" + it->second;
-		ret[++i] = new char[tmp.size() + 1];
-		ret[i][tmp.size()] = 0;
-		ret[i] = strcpy(ret[i], tmp.c_str()); 
-	}
-	return ret;
-}
-int Response::handleCGI(int clientSocket, std::string const &script,
-                         std::string const &query) {
-  (void)clientSocket;
-  int pipefd[2];
-  if (pipe(pipefd) == -1) {
-    std::cerr << "pipe failed" << std::endl;
-    return 500;
-  }
-  pid_t pid = fork();
-  if (pid < 0) {
-    std::cerr << "Fork failed" << std::endl;
-    return 500;
-  }
-  if (!pid) {
-    close(pipefd[0]);
-	hashmap env;
-	env = setEnvForCGI(script, query);
-    dup2(pipefd[1], STDOUT_FILENO);
-    close(pipefd[1]);
-	std::cerr<< "script " << script;
-	char **envv = hashmapToChrArray(env);
-	char *script_array[2];
-	script_array[1] = NULL;
-	script_array[0] = new char[script.size() + 1];
-	script_array[0][script.size()] = 0;
-	script_array[0] = strcpy(script_array[0],script.c_str());
-    execve(script.c_str(), script_array, envv);
-    for (int i = 0; envv[i]; ++i){
-        std::cerr << "env i " << i << " >>>" << envv[i] << std::endl;
-        delete[] envv[i];
-    }
-	delete[] envv;
-    _exit(127);
-  } else {
-    close(pipefd[1]);
-    int status;
-    if (waitpid(pid, &status, 0) == -1)
-      return 500;
-    if (WIFEXITED(status) && WEXITSTATUS(status))
-      return 502;
-    char buffer[4096];
-    _body = "";
-    ssize_t n;
-    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
-      _body.append(buffer, n);
-    }
-    close(pipefd[0]);
-    setHeader("Content-Length", sizeToStr(_body.size()));
-    setHeader("Content-Type", findContentType());
-  }
-  return 200;
-}
 void Response::httpMethodGet(Request const &req) {
   (void)req; // req will be needed for the cgi(env + headers)
   std::string myStr[] = {"index", "index.html"};
@@ -373,14 +286,18 @@ void Response::httpMethodGet(Request const &req) {
     path = script_path;
   }
   tryFiles.assign(myStr, myStr + 2);
+  std::cout << "filestatus for " << path << " is " << fileStatus(path) << std::endl;
   if (fileStatus(path) == FILE_DIR) {
     for (std::vector<std::string>::const_iterator it = tryFiles.begin();
          it != tryFiles.end(); ++it) {
       std::string filePath(path + *it);
-      if (fileStatus(filePath) == FILE_NOT) {
-        setBodyError(404);
-      } else
-        break;
+      std::cout << "trying " << filePath << std::endl;
+      if (fileStatus(filePath) == FILE_REG) {
+          _statusCode = 200;
+          path = filePath;
+          break;
+      } else 
+          setBodyError(404);
     }
   } else if (fileStatus(path) == FILE_NOT) {
     setBodyError(404);
@@ -388,15 +305,19 @@ void Response::httpMethodGet(Request const &req) {
   if (_statusCode == 200)
     _path = path;
   if (_statusCode == 200 && req.isCGI()) {
-    int ret = handleCGI(0, script_path, query);
+    CgiHandler cgi;
+    cgi.setEnvGet(script_path, query);
+    int ret = cgi.handleGet();
     if (ret != 200)
-        setBodyError(ret);
+      setBodyError(ret);
+    else
+      _body = cgi.body();
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
   } else if (_statusCode == 200) { // We have a valid file
     setBody(_path);
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
-    std::cout << "path " << _path << " size " << sizeToStr(_body.size())
-              << " type " << findContentType() << std::endl;
   } else {
     setBodyError(_statusCode);
   }
