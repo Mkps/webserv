@@ -24,10 +24,7 @@
 #include <unistd.h>
 #include <vector>
 
-Response::Response() {
-  // If this is used something went very wrong...
-  setDefaultHeaders();
-}
+Response::Response() { setDefaultHeaders(); }
 
 Response::Response(Request const &request) {
   (void)request;
@@ -52,9 +49,9 @@ short const &Response::getStatusCode() const { return _statusCode; }
 
 hashmap const &Response::getHeader() const { return this->_responseHeaders; }
 
-std::string const &Response::getHeaderValue(std::string const &key) const {
+std::string Response::getHeaderValue(std::string const &key) const {
   if (_responseHeaders.find(key) == _responseHeaders.end())
-    std::cerr << "Value not found" << std::endl;
+    return std::string();
   return _responseHeaders.find(key)->second;
 }
 
@@ -98,16 +95,12 @@ void Response::processRequest(Request const &req) {
   _path = path;
   setStatusCode(200);
   if (req.getRequestLine().getMethod() == "GET") {
-    std::cout << "GET detected" << std::endl;
     httpMethodGet(req);
   } else if (req.getRequestLine().getMethod() == "POST") {
-    std::cout << "POST detected" << std::endl;
     httpMethodPost(req);
   } else if (req.getRequestLine().getMethod() == "DELETE") {
-    std::cout << "DELETE detected" << std::endl;
     httpMethodDelete(req);
   } else {
-    std::cout << "valid method but not handled?" << std::endl;
     setStatusCode(405);
     setBodyError(_statusCode);
   }
@@ -121,7 +114,7 @@ void Response::setBodyError(int status) {
     << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()));
-  setHeader("Content-Type", "text/plain");
+  setHeader("Content-Type", "text/html");
 }
 
 std::string Response::getResponseMsg() {
@@ -303,8 +296,7 @@ void Response::httpMethodGet(Request const &req) {
   if (_statusCode == 200)
     _path = path;
   if (_statusCode == 200 && req.isCGI()) {
-    CgiHandler cgi;
-    cgi.setEnvGet(script_path, query);
+    CgiHandler cgi(script_path, query);
     int ret = cgi.handleGet();
     if (ret != 200)
       setBodyError(ret);
@@ -312,7 +304,7 @@ void Response::httpMethodGet(Request const &req) {
       _body = cgi.body();
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
-  } else if (_statusCode == 200) { // We have a valid file
+  } else if (_statusCode == 200) {
     setBody(_path);
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
@@ -339,8 +331,7 @@ void Response::httpMethodPost(Request const &req) {
       script_path = script_path.substr(0, query_pos);
     }
     path = script_path;
-    CgiHandler cgi;
-    cgi.setEnvPost(script_path, query);
+    CgiHandler cgi(script_path, query);
     cgi.setRequestBody(req.getRequestBody());
     int ret = cgi.handlePost();
     if (ret != 200)

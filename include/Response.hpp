@@ -42,7 +42,7 @@ class Response {
 		void				setBodyError(int status);
 		void				setBody(std::string const & filename);
 		hashmap const &		getHeader() const;
-		std::string const &	getHeaderValue(std::string const & key) const;
+		std::string         getHeaderValue(std::string const & key) const;
 		void				setHeader(std::string const & key, std::string const & value);
 		void				setDefaultHeaders();
 
