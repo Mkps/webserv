@@ -55,7 +55,12 @@ std::string Response::getHeaderValue(std::string const &key) const {
   return _responseHeaders.find(key)->second;
 }
 
-void Response::setHeader(std::string const &key, std::string const &value) {
+void Response::setHeader(std::string const &key, std::string const &value,
+                         bool overwrite) {
+  hashmap::iterator it = _responseHeaders.find(key);
+  if (it != _responseHeaders.end() && !overwrite) {
+    return;
+  }
   _responseHeaders[key] = value;
 }
 
@@ -90,10 +95,8 @@ void Response::processRequest(Request const &req) {
     setBodyError(400);
     return;
   }
-  std::string root = "./resources";
-  std::string path = root + req.getFilePath();
-  _path = path;
-  setStatusCode(200);
+  _statusCode = 200;
+  findPath(req);
   if (req.getRequestLine().getMethod() == "GET") {
     httpMethodGet(req);
   } else if (req.getRequestLine().getMethod() == "POST") {
@@ -101,20 +104,24 @@ void Response::processRequest(Request const &req) {
   } else if (req.getRequestLine().getMethod() == "DELETE") {
     httpMethodDelete(req);
   } else {
-    setStatusCode(405);
+    _statusCode = 405;
+  }
+  if (_statusCode >= 200 && _statusCode < 300) {
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    setHeader("Content-Type", findContentType(), true);
+  } else {
     setBodyError(_statusCode);
   }
 }
 
 void Response::setBodyError(int status) {
-
   std::ostringstream s;
   _statusCode = status;
   s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
     << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
   _body = s.str();
-  setHeader("Content-Length", sizeToStr(_body.size()));
-  setHeader("Content-Type", "text/html");
+  setHeader("Content-Length", sizeToStr(_body.size()), true);
+  setHeader("Content-Type", "text/html", true);
 }
 
 std::string Response::getResponseMsg() {
@@ -131,7 +138,6 @@ void Response::setBody(std::string const &filename) {
                      std::ios::in | std::ios::binary | std::ios::ate);
   std::ifstream::pos_type file_size = file.tellg();
   file.seekg(0, std::ios::beg);
-
   std::string file_buffer;
   file_buffer.resize(file_size);
   file.read(&file_buffer[0], file_size);
@@ -168,42 +174,18 @@ std::string Response::findContentType() {
   return "text/plain";
 }
 
-inline std::string to_hex(size_t value) {
-  std::ostringstream oss(std::ios::binary);
-  oss << std::hex << value;
-  return oss.str();
-}
-inline int sendStr(int clientSocket, std::string const &str) {
-  return send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
-}
-inline int sendChunk(int clientSocket, std::string const &chunk) {
-  int tmp = 0;
-  int ret = 0;
-  std::string size = to_hex(chunk.size()) + "\r\n";
-  std::string chunkMsg = chunk + "\r\n";
-  tmp = send(clientSocket, size.c_str(), size.size(), 0);
-  if ((size_t)tmp != size.size()) {
-    std::cout << "size " << tmp << std::endl;
-  }
-  ret += tmp;
-  tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
-  if ((size_t)tmp != chunkMsg.size()) {
-    std::cout << "chunk " << tmp << std::endl;
-  }
-  ret += tmp;
-  return ret;
-}
 void Response::setDefaultHeaders() {
-  setHeader("Date", get_current_date());
-  setHeader("Content-Length", "42");
-  setHeader("Content-Type", "text/plain");
-  setHeader("Connection", "close");
-  setHeader("Charset", "UTF-8");
-  setHeader("Server", "webserv/0.1");
+  setHeader("Date", get_current_date(), true);
+  setHeader("Content-Length", "42", true);
+  setHeader("Content-Type", "text/plain", true);
+  setHeader("Connection", "close", true);
+  setHeader("Charset", "UTF-8", true);
+  setHeader("Server", "webserv/0.1", true);
 }
 
 void Response::clear() {
   _responseHeaders.clear();
+  _statusCode = 200;
   setDefaultHeaders();
 }
 std::string Response::chunkResponse() {
@@ -226,8 +208,8 @@ void Response::sendResponse(int clientSocket) {
   _offset = 0;
   _bytes_sent = 0;
   if (_body.size() > 1024) {
-    setHeader("Transfer-Encoding", "chunked");
-    setHeader("Connection", "keep-alive");
+    setHeader("Transfer-Encoding", "chunked", true);
+    setHeader("Connection", "keep-alive", true);
     res << writeHeader();
     sendStr(clientSocket, res.str());
     res.clear();
@@ -247,71 +229,66 @@ void Response::sendResponse(int clientSocket) {
 }
 
 void Response::httpMethodDelete(Request const &req) {
-  std::string root = "./resources";
-  std::string path = root + req.getFilePath();
-  if (fileStatus(path) == FILE_REG || fileStatus(path) == FILE_DIR) {
-    if (remove(path.c_str()) == EXIT_SUCCESS)
-      _statusCode = 204;
-    else
-      _statusCode = 403;
-  } else
-    _statusCode = 404;
-  if (_statusCode >= 400)
-    setBodyError(_statusCode);
+  (void)req;
+  if (remove(_path.c_str()) == EXIT_SUCCESS)
+    _statusCode = 204;
   else
-    setBody("");
+    _statusCode = 403;
 }
 
-void Response::httpMethodGet(Request const &req) {
-  (void)req; // req will be needed for the cgi(env + headers)
+inline std::string cutQuery(std::string const &path) {
+
+  size_t query_pos = path.find("?");
+  if (query_pos != std::string::npos) {
+    return path.substr(0, query_pos);
+  } else
+    return path;
+}
+void Response::findPath(Request const &req) {
   std::string myStr[] = {"index", "index.html"};
-  std::vector<std::string> tryFiles;
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
-  std::string script_path, query;
-  if (req.isCGI()) {
-    script_path = path;
-    size_t query_pos = script_path.find("?");
-    if (query_pos != std::string::npos) {
-      query = script_path.substr(query_pos + 1);
-      script_path = script_path.substr(0, query_pos);
-    }
-    path = script_path;
-  }
+
+  _path = path;
+  if (req.isCGI())
+    return;
+  // Check for redirection here
+  std::vector<std::string> tryFiles;
   tryFiles.assign(myStr, myStr + 2);
+  if (fileStatus(path) == FILE_REG) {
+    _path = std::string(path);
+    return;
+  }
   if (fileStatus(path) == FILE_DIR) {
     for (std::vector<std::string>::const_iterator it = tryFiles.begin();
          it != tryFiles.end(); ++it) {
       std::string filePath(path + *it);
       if (fileStatus(filePath) == FILE_REG) {
-        _statusCode = 200;
-        path = filePath;
-        break;
-      } else
-        setBodyError(404);
+        _path = std::string(filePath);
+        return;
+      } else if (fileStatus(filePath) != FILE_NOT) {
+        _statusCode = 403;
+      }
     }
   } else if (fileStatus(path) == FILE_NOT) {
-    setBodyError(404);
-  }
-  if (_statusCode == 200)
-    _path = path;
-  if (_statusCode == 200 && req.isCGI()) {
-    CgiHandler cgi(script_path, query);
-    int ret = cgi.handleGet();
-    if (ret != 200)
-      setBodyError(ret);
-    else
-      _body = cgi.body();
-    setHeader("Content-Length", sizeToStr(_body.size()));
-    setHeader("Content-Type", findContentType());
-  } else if (_statusCode == 200) {
-    setBody(_path);
-    setHeader("Content-Length", sizeToStr(_body.size()));
-    setHeader("Content-Type", findContentType());
-  } else {
-    setBodyError(_statusCode);
+    _statusCode = 404;
   }
 }
+
+void Response::httpMethodGet(Request const &req) {
+  if (_statusCode == 200 && req.isCGI()) {
+    CgiHandler cgi(_path);
+    int ret = cgi.handleGet();
+    if (ret == 200)
+      _body = cgi.body();
+  } else if (_statusCode == 200) {
+    if (!access(_path.c_str(), F_OK | R_OK))
+      setBody(_path);
+    else
+      _statusCode = 403;
+  }
+}
+
 inline std::string generate_filename() {
   std::ostringstream oss;
   time_t t = time(NULL);
@@ -320,32 +297,22 @@ inline std::string generate_filename() {
 }
 
 void Response::httpMethodPost(Request const &req) {
-  std::string root = "./resources";
-  std::string path = root + req.getFilePath();
-  std::string script_path, query;
-  if (req.isCGI() && _statusCode == 200) {
-    script_path = path;
-    size_t query_pos = script_path.find("?");
-    if (query_pos != std::string::npos) {
-      query = script_path.substr(query_pos + 1);
-      script_path = script_path.substr(0, query_pos);
-    }
-    path = script_path;
-    CgiHandler cgi(script_path, query);
+  if (req.isCGI()) {
+    CgiHandler cgi(_path);
     cgi.setRequestBody(req.getRequestBody());
     int ret = cgi.handlePost();
-    if (ret != 200)
-      setBodyError(ret);
-    else
+    if (ret == 200)
       _body = cgi.body();
-    setHeader("Content-Length", sizeToStr(_body.size()));
-    setHeader("Content-Type", findContentType());
   } else if (_statusCode == 200) {
     std::ofstream outFile;
-    if (fileStatus(path) == FILE_DIR)
-      path += generate_filename();
-    outFile.open(path.c_str(), std::ios::out | std::ios::binary |
-                                   std::ios::ate | std::ios::app);
+    if (fileStatus(_path) == FILE_DIR)
+      _path += generate_filename();
+    if (access(_path.c_str(), F_OK | W_OK)) {
+      _statusCode = 403;
+      return;
+    }
+    outFile.open(_path.c_str(), std::ios::out | std::ios::binary |
+                                    std::ios::ate | std::ios::app);
     if (!outFile.good()) {
       _statusCode = 500;
       return;
@@ -353,7 +320,5 @@ void Response::httpMethodPost(Request const &req) {
     outFile.write(req.getRequestBody().c_str(), req.getRequestBody().size());
     _statusCode = 204;
     return;
-  } else {
-    setBodyError(_statusCode);
   }
 }

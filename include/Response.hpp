@@ -43,7 +43,7 @@ class Response {
 		void				setBody(std::string const & filename);
 		hashmap const &		getHeader() const;
 		std::string         getHeaderValue(std::string const & key) const;
-		void				setHeader(std::string const & key, std::string const & value);
+		void				setHeader(std::string const & key, std::string const & value, bool overwrite);
 		void				setDefaultHeaders();
 
 		void				clear();
@@ -57,5 +57,6 @@ class Response {
 		void				httpMethodGet(Request const& req);
 		void				httpMethodPost(Request const& req);
 		std::string			findContentType();
+        void                findPath(Request const &req);
 };
 #endif
