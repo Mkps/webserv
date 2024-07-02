@@ -3,25 +3,39 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/23 14:15:40 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/02 20:44:05 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
 #include "Server.hpp"
 
+#define NOCOLOR "\033[0m"
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+
+
 int	main(int ac, char **av)
 {
-	if (ac != 2)
+	const std::string defaultfile = "configurations/default.config";
+	try
 	{
-		std::cout << "Error: Incorrect argument count" << std::endl;
-		return 1;
+		std::string	fileConfig = defaultfile;
+		if (ac > 2)
+			throw std::invalid_argument("Incorrect argument count");
+		else if (ac == 2)
+			fileConfig = av[1];
+		Server *server = new Server(fileConfig);
+		server->run();
+		delete server;
 	}
-	Server *server = new Server(av[1]);
-	server->run();
-	delete server;
+	catch(const std::exception& e)
+	{
+		std::cerr <<RED "Error: " NOCOLOR << e.what() << '\n';
+		return (1);
+	}
 	return 0;
 }
