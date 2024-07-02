@@ -51,6 +51,15 @@ hashmap CgiHandler::_setEnvPost(const std::string &script,
 // ### Constructors/Coplien
 CgiHandler::CgiHandler() { _envv = NULL; }
 
+CgiHandler::CgiHandler(std::string const &uri) {
+  _envv = NULL;
+  _script = uri;
+  size_t query_pos = _script.find("?");
+  if (query_pos != std::string::npos) {
+    _qData = _script.substr(query_pos + 1);
+    _script = _script.substr(0, query_pos);
+  }
+}
 CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
   _envv = NULL;
   _script = script;
@@ -87,6 +96,8 @@ void CgiHandler::_execCGIGet() {
 }
 
 int CgiHandler::handleGet() {
+  if (access(_script.c_str(), F_OK | X_OK))
+      return 403;
   int pipefd[2];
   if (pipe(pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
@@ -119,7 +130,6 @@ int CgiHandler::handleGet() {
   }
   return 200;
 }
-
 
 void CgiHandler::_execCGIPost() {
   hashmap env;
@@ -209,4 +219,3 @@ inline char **hashmapToChrArray(hashmap const &map) {
   }
   return ret;
 }
-

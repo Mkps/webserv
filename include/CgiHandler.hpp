@@ -33,6 +33,7 @@ private:
 public:
   CgiHandler();
   CgiHandler(std::string const &script, std::string const &query);
+  CgiHandler(std::string const &uri);
   ~CgiHandler();
   CgiHandler(CgiHandler const &src);
   CgiHandler &operator=(CgiHandler const &rhs);
