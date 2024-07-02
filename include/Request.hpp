@@ -38,8 +38,8 @@ public:
   void 					setRequest(std::string const &request);
   Request const 		&getRequest() const;
   bool					isCGI() const;
-  RequestLine const		&getRequestLine() const;
-  hashmap const			&getRequestHeaders() const;
-  std::string const		&getRequestBody() const;
+  RequestLine const		&line() const;
+  hashmap const			&headers() const;
+  std::string const		&body() const;
 };
 #endif

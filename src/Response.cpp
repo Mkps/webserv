@@ -12,6 +12,7 @@
 
 #include "Response.hpp"
 #include "CgiHandler.hpp"
+#include "Cookie.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -95,13 +96,19 @@ void Response::processRequest(Request const &req) {
     setBodyError(400);
     return;
   }
+  Cookie ck;
+  if (req.headers().find("cookie") != req.headers().end()) {
+      ck.import(req.headers().find("cookie")->second);
+      if (ck.exist("root"))
+          std::cout << "hello root user " << ck.find("root").second << std::endl;
+  }
   _statusCode = 200;
   findPath(req);
-  if (req.getRequestLine().getMethod() == "GET") {
+  if (req.line().getMethod() == "GET") {
     httpMethodGet(req);
-  } else if (req.getRequestLine().getMethod() == "POST") {
+  } else if (req.line().getMethod() == "POST") {
     httpMethodPost(req);
-  } else if (req.getRequestLine().getMethod() == "DELETE") {
+  } else if (req.line().getMethod() == "DELETE") {
     httpMethodDelete(req);
   } else {
     _statusCode = 405;
@@ -109,6 +116,7 @@ void Response::processRequest(Request const &req) {
   if (_statusCode >= 200 && _statusCode < 300) {
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", findContentType(), true);
+    setHeader("Set-Cookie", "root=alexis;", false);
   } else {
     setBodyError(_statusCode);
   }
@@ -299,7 +307,7 @@ inline std::string generate_filename() {
 void Response::httpMethodPost(Request const &req) {
   if (req.isCGI()) {
     CgiHandler cgi(_path);
-    cgi.setRequestBody(req.getRequestBody());
+    cgi.setRequestBody(req.body());
     int ret = cgi.handlePost();
     if (ret == 200)
       _body = cgi.body();
@@ -317,7 +325,7 @@ void Response::httpMethodPost(Request const &req) {
       _statusCode = 500;
       return;
     }
-    outFile.write(req.getRequestBody().c_str(), req.getRequestBody().size());
+    outFile.write(req.body().c_str(), req.body().size());
     _statusCode = 204;
     return;
   }
