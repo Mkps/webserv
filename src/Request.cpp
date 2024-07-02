@@ -91,4 +91,10 @@ void Request::fetchData(std::string const &request) {
   }
 }
 
+bool	Request::isCGI() const {
+	if (_requestLine.getRequestUri().find("/cgi-bin/") == 0)
+		return true;
+	return false;
+}
+
 int Request::validateRequest() const { return 0; }

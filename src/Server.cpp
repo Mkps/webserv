@@ -11,14 +11,14 @@
 /* ************************************************************************** */
 
 #include "Server.hpp"
-#include "Socket.hpp"
 #include "Client.hpp"
-#include <iostream>
+#include "Socket.hpp"
 #include <exception>
+#include <iostream>
 #include <poll.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 Server	*Server::_instance = NULL;
 size_t	Server::_nbrOFServ = 1;
