@@ -1,7 +1,11 @@
 Alexis : http
--Finir les methodes http
--Gestion header
+//-Gestion header
+-Gestion CGI post
+-Gestion des headers de reponse CGI
 -Gestion cookies 
+-Gestion des requetes chunked
+-Fix leak when bad CGI exec
+-Ajout autres methodes http?
 -Gestion CGI
 
 Yassine :

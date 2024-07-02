@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "Response.hpp"
+#include "CgiHandler.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -19,12 +20,11 @@
 #include <iostream>
 #include <sstream>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 
-Response::Response() {
-  // If this is used something went very wrong...
-  setDefaultHeaders();
-}
+Response::Response() { setDefaultHeaders(); }
 
 Response::Response(Request const &request) {
   (void)request;
@@ -49,9 +49,9 @@ short const &Response::getStatusCode() const { return _statusCode; }
 
 hashmap const &Response::getHeader() const { return this->_responseHeaders; }
 
-std::string const &Response::getHeaderValue(std::string const &key) const {
+std::string Response::getHeaderValue(std::string const &key) const {
   if (_responseHeaders.find(key) == _responseHeaders.end())
-    std::cerr << "Value not found" << std::endl;
+    return std::string();
   return _responseHeaders.find(key)->second;
 }
 
@@ -78,6 +78,8 @@ inline std::string getResponse(short status) {
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
+    if (status == 502)
+      return "Bad Gateway";
     return "Server Error";
   } else
     return "Bad Request";
@@ -93,16 +95,12 @@ void Response::processRequest(Request const &req) {
   _path = path;
   setStatusCode(200);
   if (req.getRequestLine().getMethod() == "GET") {
-    std::cout << "GET detected" << std::endl;
     httpMethodGet(req);
   } else if (req.getRequestLine().getMethod() == "POST") {
-    std::cout << "POST detected" << std::endl;
     httpMethodPost(req);
   } else if (req.getRequestLine().getMethod() == "DELETE") {
-    std::cout << "DELETE detected" << std::endl;
     httpMethodDelete(req);
   } else {
-    std::cout << "valid method but not handled?" << std::endl;
     setStatusCode(405);
     setBodyError(_statusCode);
   }
@@ -116,7 +114,7 @@ void Response::setBodyError(int status) {
     << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()));
-  setHeader("Content-Type", "text/plain");
+  setHeader("Content-Type", "text/html");
 }
 
 std::string Response::getResponseMsg() {
@@ -129,7 +127,8 @@ std::string Response::getResponseMsg() {
 }
 
 void Response::setBody(std::string const &filename) {
-  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream file(filename.c_str(),
+                     std::ios::in | std::ios::binary | std::ios::ate);
   std::ifstream::pos_type file_size = file.tellg();
   file.seekg(0, std::ios::beg);
 
@@ -169,8 +168,30 @@ std::string Response::findContentType() {
   return "text/plain";
 }
 
-inline void sendStr(int clientSocket, std::string const &str) {
-  send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
+inline std::string to_hex(size_t value) {
+  std::ostringstream oss(std::ios::binary);
+  oss << std::hex << value;
+  return oss.str();
+}
+inline int sendStr(int clientSocket, std::string const &str) {
+  return send(clientSocket, str.c_str(), strlen(str.c_str()), 0);
+}
+inline int sendChunk(int clientSocket, std::string const &chunk) {
+  int tmp = 0;
+  int ret = 0;
+  std::string size = to_hex(chunk.size()) + "\r\n";
+  std::string chunkMsg = chunk + "\r\n";
+  tmp = send(clientSocket, size.c_str(), size.size(), 0);
+  if ((size_t)tmp != size.size()) {
+    std::cout << "size " << tmp << std::endl;
+  }
+  ret += tmp;
+  tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
+  if ((size_t)tmp != chunkMsg.size()) {
+    std::cout << "chunk " << tmp << std::endl;
+  }
+  ret += tmp;
+  return ret;
 }
 void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date());
@@ -182,26 +203,47 @@ void Response::setDefaultHeaders() {
 }
 
 void Response::clear() {
-  // Should unset the map
   _responseHeaders.clear();
   setDefaultHeaders();
 }
+std::string Response::chunkResponse() {
+  const size_t chunk_size = 1024; // Adjust this size as needed for the example
+  std::string chunked_body;
+
+  if (_offset < _body.size()) {
+    size_t len = std::min(chunk_size, _body.size() - _offset);
+    std::string chunk = _body.substr(_offset, len);
+    _offset += len;
+    return chunk;
+  } else {
+    chunked_body = "0\r\n\r\n";
+  }
+  return chunked_body;
+}
 void Response::sendResponse(int clientSocket) {
-   //std::string res = writeHeader() + _body + "\r\n\r\n";
-    std::ostringstream res;
-	res << writeHeader() <<  _body;
-   // res << "HTTP/1.1 200 OK\r\n"
-   //          << "Date: " << get_current_date() << "\r\n"
-   //          << "Content-Type: text/html; charset=UTF-8\r\n"
-   //          << "Content-Length: " << _body.size() << "\r\n"
-   //          << "Connection: close\r\n"  // Close the connection after sending the response
-   //          << "Server: MyServer/1.0\r\n"
-   //          << "\r\n"
-   //          << _body;
-  std::cout << "response is >>>" << std::endl;
-  if (getHeaderValue("Content-Type") == "text/html")
-	  std::cout << writeHeader()<< std::endl;
-  sendStr(clientSocket, res.str());
+  // std::string res = writeHeader() + _body + "\r\n\r\n";
+  std::ostringstream res;
+  _offset = 0;
+  _bytes_sent = 0;
+  if (_body.size() > 1024) {
+    setHeader("Transfer-Encoding", "chunked");
+    setHeader("Connection", "keep-alive");
+    res << writeHeader();
+    sendStr(clientSocket, res.str());
+    res.clear();
+    while (_offset < _body.size()) {
+      std::string chunk = chunkResponse();
+      _bytes_sent += sendChunk(clientSocket, chunk);
+    }
+    std::string chunk = chunkResponse();
+    sendStr(clientSocket, chunk);
+  } else {
+    std::cout << "body is " << _body << std::endl;
+    res << writeHeader() << _body << "\r\n\r\n";
+    if (getHeaderValue("Content-Type") == "text/html")
+      std::cout << writeHeader() << std::endl;
+    sendStr(clientSocket, res.str());
+  }
 }
 
 void Response::httpMethodDelete(Request const &req) {
@@ -219,38 +261,53 @@ void Response::httpMethodDelete(Request const &req) {
   else
     setBody("");
 }
+
 void Response::httpMethodGet(Request const &req) {
   (void)req; // req will be needed for the cgi(env + headers)
   std::string myStr[] = {"index", "index.html"};
   std::vector<std::string> tryFiles;
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
+  std::string script_path, query;
+  if (req.isCGI()) {
+    script_path = path;
+    size_t query_pos = script_path.find("?");
+    if (query_pos != std::string::npos) {
+      query = script_path.substr(query_pos + 1);
+      script_path = script_path.substr(0, query_pos);
+    }
+    path = script_path;
+  }
   tryFiles.assign(myStr, myStr + 2);
   if (fileStatus(path) == FILE_DIR) {
     for (std::vector<std::string>::const_iterator it = tryFiles.begin();
          it != tryFiles.end(); ++it) {
       std::string filePath(path + *it);
-      if (fileStatus(filePath) == FILE_NOT) {
-        setBodyError(404);
-      } else
+      if (fileStatus(filePath) == FILE_REG) {
+        _statusCode = 200;
+        path = filePath;
         break;
+      } else
+        setBodyError(404);
     }
   } else if (fileStatus(path) == FILE_NOT) {
     setBodyError(404);
   }
   if (_statusCode == 200)
     _path = path;
-  bool isCGI = 0;
-  if (isCGI) {
-    std::cout << "Do cgi stuff here" << std::endl;
-  } else if (_statusCode == 200) { // We have a valid file
-    setBody(_path);
-    // std::ostringstream ss;
-    //  ss << _body.size();
+  if (_statusCode == 200 && req.isCGI()) {
+    CgiHandler cgi(script_path, query);
+    int ret = cgi.handleGet();
+    if (ret != 200)
+      setBodyError(ret);
+    else
+      _body = cgi.body();
     setHeader("Content-Length", sizeToStr(_body.size()));
     setHeader("Content-Type", findContentType());
-    std::cout << "path " << _path << " size " << sizeToStr(_body.size())
-              << " type " << findContentType() << std::endl;
+  } else if (_statusCode == 200) {
+    setBody(_path);
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
   } else {
     setBodyError(_statusCode);
   }
@@ -263,12 +320,26 @@ inline std::string generate_filename() {
 }
 
 void Response::httpMethodPost(Request const &req) {
-  (void)req; // will probably need it... Maybe
   std::string root = "./resources";
   std::string path = root + req.getFilePath();
-  bool isCGI = 0;
-  if (isCGI) {
-    std::cout << "Do cgi stuff here" << std::endl;
+  std::string script_path, query;
+  if (req.isCGI() && _statusCode == 200) {
+    script_path = path;
+    size_t query_pos = script_path.find("?");
+    if (query_pos != std::string::npos) {
+      query = script_path.substr(query_pos + 1);
+      script_path = script_path.substr(0, query_pos);
+    }
+    path = script_path;
+    CgiHandler cgi(script_path, query);
+    cgi.setRequestBody(req.getRequestBody());
+    int ret = cgi.handlePost();
+    if (ret != 200)
+      setBodyError(ret);
+    else
+      _body = cgi.body();
+    setHeader("Content-Length", sizeToStr(_body.size()));
+    setHeader("Content-Type", findContentType());
   } else if (_statusCode == 200) {
     std::ofstream outFile;
     if (fileStatus(path) == FILE_DIR)
