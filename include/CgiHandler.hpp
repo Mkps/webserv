@@ -37,13 +37,13 @@ public:
   CgiHandler(CgiHandler const &src);
   CgiHandler &operator=(CgiHandler const &rhs);
 
-  void setEnvGet(std::string const &script, std::string const &query);
-  void setEnvPost(std::string const &script, std::string const &query);
+  int handleGet();
+  int handlePost();
+
+  std::string const &body() const;
   void setRequestBody(std::string const &requestbody);
   void setScript(std::string const &script);
   void setQueryData(std::string const &qData);
-  std::string const &body() const;
-  int handleGet();
-  int handlePost();
 };
+char **hashmapToChrArray(hashmap const &map);
 #endif
