@@ -15,6 +15,7 @@
 Configuration::Configuration():
 _id(size_t())
 {
+    (void)_id;
 }
 
 Configuration& Configuration::operator=(const Configuration & src)
@@ -40,5 +41,7 @@ Configuration::~Configuration()
 Configuration::Configuration(std::string file_config, size_t id):
 _id(id)
 {
+    (void)file_config;
+    (void)id;
 	std::cout << "file config je dois pouvoir lire est stockée les configuration" << std::endl;
 }
