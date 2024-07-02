@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 23:53:18 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/02 00:56:53 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/02 16:11:31 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,9 @@ Configuration::~Configuration()
 
 ////////////////////////////////////////////////////////////////////////
 
+/// @brief Constructeur parametric de Configuration
+/// @param file_config un fichier de configuration avec la norme 
+/// @param id du serveur, qui est attitré
 Configuration::Configuration(std::string file_config, size_t id):
 _id(id)
 {
