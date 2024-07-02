@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 11:36:03 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/02 00:40:33 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,37 +20,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-Server *Server::_instance = NULL;
-
-Server::Server(std::string config) {
-  (void)config;
-  std::cout << "Supposed to open the config here" << std::endl;
-  void *ptr = NULL;
-
-  ptr = _createSocket("127.0.0.1", 8000);
-  if (!ptr) {
-    std::cerr << "Failed to create socket" << std::endl;
-    delete this;
-    exit(1);
-  }
-
-  ptr = _createSocket("127.0.0.1", 8001);
-  if (!ptr) {
-    std::cerr << "Failed to create socket" << std::endl;
-    delete this;
-    exit(1);
-  }
-}
-
-Server::~Server(void) {
-  for (size_t i = 0; i < _sockets.size(); i++) {
-    delete _sockets[i];
-  }
-  _sockets.clear();
-  for (size_t i = 0; i < _clients.size(); i++) {
-    delete _clients[i];
-  }
-  _clients.clear();
 }
 
 std::vector<s_pollfd> Server::getPollfds() const { return _pollfds; }

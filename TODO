@@ -6,3 +6,7 @@ Alexis : http
 -Gestion des requetes chunked
 -Fix leak when bad CGI exec
 -Ajout autres methodes http?
+-Gestion CGI
+
+Yassine :
+- me documenter verifier mes prochaine tache a effectuer
