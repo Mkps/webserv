@@ -69,12 +69,22 @@ CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
 CgiHandler::~CgiHandler() {
   if (_envv) {
     for (int i = 0; _envv[i] != NULL; ++i) {
-      delete _envv[i];
+      delete[] _envv[i];
     }
     delete[] _envv;
+    _envv =  NULL;
   }
 }
 
+void CgiHandler::freeEnvv() {
+  if (_envv) {
+    for (int i = 0; _envv[i] != NULL; ++i) {
+      delete[] _envv[i];
+    }
+    delete[] _envv;
+    _envv =  NULL;
+  }
+}
 CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
 
 CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
@@ -92,6 +102,7 @@ void CgiHandler::_execCGIGet() {
   script_array[0][_script.size()] = 0;
   script_array[0] = strcpy(script_array[0], _script.c_str());
   execve(_script.c_str(), script_array, _envv);
+  freeEnvv();
   exit(127);
 }
 

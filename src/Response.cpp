@@ -96,12 +96,6 @@ void Response::processRequest(Request const &req) {
     setBodyError(400);
     return;
   }
-  Cookie ck;
-  if (req.headers().find("cookie") != req.headers().end()) {
-      ck.import(req.headers().find("cookie")->second);
-      if (ck.exist("root"))
-          std::cout << "hello root user " << ck.find("root").second << std::endl;
-  }
   _statusCode = 200;
   findPath(req);
   if (req.line().getMethod() == "GET") {
@@ -116,7 +110,6 @@ void Response::processRequest(Request const &req) {
   if (_statusCode >= 200 && _statusCode < 300) {
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", findContentType(), true);
-    setHeader("Set-Cookie", "root=alexis;", false);
   } else {
     setBodyError(_statusCode);
   }

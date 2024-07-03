@@ -29,6 +29,7 @@ private:
   hashmap _setEnvPost(const std::string &script, const std::string &query);
   void _execCGIGet();
   void _execCGIPost();
+  void freeEnvv();
 
 public:
   CgiHandler();
