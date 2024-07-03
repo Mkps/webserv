@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/27 14:15:48 by aloubier          #+#    #+#             */
-/*   Updated: 2024/07/03 11:39:37 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 12:05:54 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,9 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "Server.hpp"
+
+Server* CgiHandler::_server = NULL;
 
 // Private Member Functions
 hashmap CgiHandler::_setEnvGet(const std::string &script,
@@ -49,12 +52,13 @@ hashmap CgiHandler::_setEnvPost(const std::string &script,
 // Public Member Functions
 //
 // ### Constructors/Coplien
-CgiHandler::CgiHandler() { _envv = NULL; }
+CgiHandler::CgiHandler(): _envv(NULL) { CgiHandler::_server = getInstance(); }
 
 CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
   _envv = NULL;
   _script = script;
   _qData = query;
+  CgiHandler::_server = Server::getInstance();
 }
 
 CgiHandler::~CgiHandler() {
@@ -66,12 +70,12 @@ CgiHandler::~CgiHandler() {
   }
 }
 
-CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
+// CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
 
-CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
-  (void)rhs;
-  return *this;
-}
+// CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
+//   (void)rhs;
+//   return *this;
+// }
 
 void CgiHandler::_execCGIGet() {
   hashmap env;
@@ -82,7 +86,7 @@ void CgiHandler::_execCGIGet() {
   script_array[0] = new char[_script.size() + 1];
   script_array[0][_script.size()] = 0;
   script_array[0] = strcpy(script_array[0], _script.c_str());
-  closeServer();
+  if (_server) _server->stop();
   execve(_script.c_str(), script_array, _envv);
   exit(127);
 }
@@ -134,7 +138,7 @@ void CgiHandler::_execCGIPost() {
   if (access(_script.c_str(), F_OK | X_OK)) {
     exit(126);
   }
-  closeServer();
+  if (_server) _server->stop();
   int ret = execve(_script.c_str(), script_array, _envv);
   exit(ret);
 }

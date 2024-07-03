@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Configuration.hpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 20:23:45 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/02 00:58:46 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/03 12:10:41 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,8 +23,8 @@ class Configuration
 {
 private:
 	const size_t			_id;
-	Configuration();
 public:
+	Configuration(); 
 	Configuration(std::string file_config, size_t id);
 	Configuration& operator= (const Configuration & src);
 	Configuration(const Configuration & src);

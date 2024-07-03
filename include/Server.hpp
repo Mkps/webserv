@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/03 11:22:28 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/03 11:38:22 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 12:12:10 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,18 +27,21 @@ class Client;
 
 class Server {
 	public:
+		Server(void);
 		Server(std::string config);
-		~Server();
+		virtual ~Server();
 
 		std::vector<s_pollfd>	getPollfds() const;
 		std::vector<Socket *>	getSockets() const;
 		std::vector<Client *>	getClients() const;
+		Server					*getInstance(void);
 
 		void					printPollfds(void) const;
 		void					updateEventPollfds(int fd, short events);
 
 		static void				signalHandler(int signal);
 		void					run();
+		void					stop();
 
 	private:
 		std::vector<s_pollfd>	_pollfds;
@@ -47,10 +50,9 @@ class Server {
 		size_t					_id;
 		Configuration			_config;
 
-		static size_t			_nbrOFServ;
+		// static size_t			_nbrOFServ;
 		static Server			*_instance;
 
-		Server(void);
 
 		int						_handleNewConnection(void);
 		int						_handleClientsEvent(void);
@@ -62,9 +64,6 @@ class Server {
 		void					_deleteSocket(Socket *socket);
 		Client					*_createClient(Socket *socket);
 		void					_deleteClient(Client *client);
-	
-	protected:
-		void					closeServer(void);
 };
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/03 11:22:56 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/03 11:38:37 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 12:12:22 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,13 +21,20 @@
 #include <unistd.h>
 
 Server	*Server::_instance = NULL;
-size_t	Server::_nbrOFServ = 1;
+// size_t	Server::_nbrOFServ = 1;
+
+Server::Server(void)
+{
+	std::cerr << "Server constructor called without config" << std::endl;
+	delete this;
+	exit(1);
+}
 
 Server::Server(std::string config):
-_id(Server::_nbrOFServ),
+// _id(Server::_nbrOFServ),
 _config(config, this->_id)
 {
-	Server::_nbrOFServ++;
+	// Server::_nbrOFServ++;
 	std::cout << "Supposed to open the config here" << std::endl;
 	void	*ptr = NULL;
 
@@ -50,7 +57,7 @@ _config(config, this->_id)
 
 Server::~Server(void)
 {
-	Server::_nbrOFServ--;
+	// Server::_nbrOFServ--;
 	for (size_t i = 0; i < _sockets.size(); i++)
 	{
 		delete _sockets[i];
@@ -68,6 +75,8 @@ std::vector<s_pollfd> Server::getPollfds() const { return _pollfds; }
 std::vector<Socket *> Server::getSockets() const { return _sockets; }
 
 std::vector<Client *> Server::getClients() const { return _clients; }
+
+Server *Server::getInstance(void) { return _instance; }
 
 Socket *Server::_createSocket(std::string ip, int port)
 {
@@ -324,7 +333,7 @@ void Server::run()
 	}
 }
 
-void	Server::closeServer(void)
+void Server::stop()
 {
 	if (_instance)
 	{

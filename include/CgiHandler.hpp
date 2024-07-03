@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/27 14:15:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/07/03 11:38:58 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 12:05:49 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,10 @@
 #include "Server.hpp"
 
 typedef std::map<std::string, std::string> hashmap;
-class CgiHandler: protected Server {
+class CgiHandler : public Server {
 private:
+  static Server *_server;
+
   hashmap _data;
   char **_envv;
   std::string _qData;
@@ -36,8 +38,8 @@ public:
   CgiHandler();
   CgiHandler(std::string const &script, std::string const &query);
   ~CgiHandler();
-  CgiHandler(CgiHandler const &src);
-  CgiHandler &operator=(CgiHandler const &rhs);
+  // CgiHandler(CgiHandler const &src);
+  // CgiHandler &operator=(CgiHandler const &rhs);
 
   int handleGet();
   int handlePost();
