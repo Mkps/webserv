@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/03 11:22:56 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/03 12:12:22 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 12:27:59 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,12 +23,7 @@
 Server	*Server::_instance = NULL;
 // size_t	Server::_nbrOFServ = 1;
 
-Server::Server(void)
-{
-	std::cerr << "Server constructor called without config" << std::endl;
-	delete this;
-	exit(1);
-}
+Server::Server(void) {}
 
 Server::Server(std::string config):
 // _id(Server::_nbrOFServ),
