@@ -5,26 +5,29 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 14:23:18 by obouhlel         ###   ########.fr       */
+/*   Created: 2024/07/03 11:22:56 by obouhlel          #+#    #+#             */
+/*   Updated: 2024/07/03 11:22:59 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
-#include "Socket.hpp"
 #include "Client.hpp"
-#include <iostream>
+#include "Socket.hpp"
 #include <exception>
+#include <iostream>
 #include <poll.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 Server	*Server::_instance = NULL;
+size_t	Server::_nbrOFServ = 1;
 
-Server::Server(std::string config)
+Server::Server(std::string config):
+_id(Server::_nbrOFServ),
+_config(config, this->_id)
 {
-	(void)config;
+	Server::_nbrOFServ++;
 	std::cout << "Supposed to open the config here" << std::endl;
 	void	*ptr = NULL;
 
@@ -47,6 +50,7 @@ Server::Server(std::string config)
 
 Server::~Server(void)
 {
+	Server::_nbrOFServ--;
 	for (size_t i = 0; i < _sockets.size(); i++)
 	{
 		delete _sockets[i];

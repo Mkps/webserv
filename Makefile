@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+         #
+#    By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/08/30 16:10:19 by aloubier          #+#    #+#              #
-#    Updated: 2024/06/23 14:16:44 by obouhlel         ###   ########.fr        #
+#    Updated: 2024/07/02 00:22:37 by yzaoui           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,12 +20,14 @@ OBJ_DIR = build/
 
 SRC_FILES = main.cpp \
 			Socket.cpp \
+			CgiHandler.cpp \
 			Client.cpp \
 			Server.cpp \
 			Request.cpp \
 			RequestLine.cpp \
 			Response.cpp \
-			http_utils.cpp
+			http_utils.cpp	\
+			Configuration.cpp
 
 SRC = $(addprefix $(SRC_DIR), $(SRC_FILES))
 

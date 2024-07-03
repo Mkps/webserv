@@ -5,13 +5,15 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/06/21 15:14:33 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/06/25 12:44:04 by obouhlel         ###   ########.fr       */
+/*   Created: 2024/07/03 11:22:28 by obouhlel          #+#    #+#             */
+/*   Updated: 2024/07/03 11:22:34 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
+
+#include "./Configuration.hpp"
 
 #include <string>
 #include <vector>
@@ -42,6 +44,10 @@ class Server {
 		std::vector<s_pollfd>	_pollfds;
 		std::vector<Socket *>	_sockets;
 		std::vector<Client *>	_clients;
+		size_t					_id;
+		Configuration			_config;
+
+		static size_t			_nbrOFServ;
 		static Server			*_instance;
 
 		Server(void);
