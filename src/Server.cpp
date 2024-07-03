@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/03 11:22:56 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/03 11:22:59 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 11:38:37 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -271,7 +271,6 @@ int Server::_handleClientsEvent(void)
 			_handleClientResponse(client);
 			updateEventPollfds(client->getFd(), POLLIN);
 		}
-		// _deleteClient(client);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -322,5 +321,13 @@ void Server::run()
 			continue;
 		if (_handleClientsEvent() == EXIT_FAILURE)
 			break;
+	}
+}
+
+void	Server::closeServer(void)
+{
+	if (_instance)
+	{
+		delete _instance;
 	}
 }

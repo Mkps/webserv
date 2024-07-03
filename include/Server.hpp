@@ -6,7 +6,7 @@
 /*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/03 11:22:28 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/03 11:22:34 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/03 11:38:22 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,6 +62,9 @@ class Server {
 		void					_deleteSocket(Socket *socket);
 		Client					*_createClient(Socket *socket);
 		void					_deleteClient(Client *client);
+	
+	protected:
+		void					closeServer(void);
 };
 
 #endif

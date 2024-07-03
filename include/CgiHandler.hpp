@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <marvin@42.fr>                    +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/27 14:15:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/27 14:15:39 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/07/03 11:38:58 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,10 @@
 
 #include <map>
 #include <string>
+#include "Server.hpp"
+
 typedef std::map<std::string, std::string> hashmap;
-class CgiHandler {
+class CgiHandler: protected Server {
 private:
   hashmap _data;
   char **_envv;

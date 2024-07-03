@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <marvin@42.fr>                    +#+  +:+       +#+        */
+/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/27 14:15:48 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/27 14:15:58 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/07/03 11:39:37 by obouhlel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,6 +82,7 @@ void CgiHandler::_execCGIGet() {
   script_array[0] = new char[_script.size() + 1];
   script_array[0][_script.size()] = 0;
   script_array[0] = strcpy(script_array[0], _script.c_str());
+  closeServer();
   execve(_script.c_str(), script_array, _envv);
   exit(127);
 }
@@ -133,6 +134,7 @@ void CgiHandler::_execCGIPost() {
   if (access(_script.c_str(), F_OK | X_OK)) {
     exit(126);
   }
+  closeServer();
   int ret = execve(_script.c_str(), script_array, _envv);
   exit(ret);
 }
