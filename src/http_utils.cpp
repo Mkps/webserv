@@ -3,7 +3,36 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <sys/socket.h>
 #include <sys/stat.h>
+
+std::string to_hex(size_t value) {
+  std::ostringstream oss(std::ios::binary);
+  oss << std::hex << value;
+  return oss.str();
+}
+
+int sendStr(int clientSocket, std::string const &str) {
+  return send(clientSocket, str.c_str(), str.size(), 0);
+}
+
+int sendChunk(int clientSocket, std::string const &chunk) {
+  int tmp = 0;
+  int ret = 0;
+  std::string size = to_hex(chunk.size()) + "\r\n";
+  std::string chunkMsg = chunk + "\r\n";
+  tmp = send(clientSocket, size.c_str(), size.size(), 0);
+  if ((size_t)tmp != size.size()) {
+    std::cout << "size " << tmp << std::endl;
+  }
+  ret += tmp;
+  tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
+  if ((size_t)tmp != chunkMsg.size()) {
+    std::cout << "chunk " << tmp << std::endl;
+  }
+  ret += tmp;
+  return ret;
+}
 
 int fileStatus(const std::string &path) {
   struct stat buf;

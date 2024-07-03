@@ -19,6 +19,7 @@ INC_DIR = ./include/
 OBJ_DIR = build/
 
 SRC_FILES = main.cpp \
+			Cookie.cpp \
 			Socket.cpp \
 			CgiHandler.cpp \
 			Client.cpp \
