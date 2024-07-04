@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -72,7 +73,7 @@ CgiHandler::~CgiHandler() {
       delete[] _envv[i];
     }
     delete[] _envv;
-    _envv =  NULL;
+    _envv = NULL;
   }
 }
 
@@ -82,7 +83,7 @@ void CgiHandler::freeEnvv() {
       delete[] _envv[i];
     }
     delete[] _envv;
-    _envv =  NULL;
+    _envv = NULL;
   }
 }
 CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
@@ -101,14 +102,18 @@ void CgiHandler::_execCGIGet() {
   script_array[0] = new char[_script.size() + 1];
   script_array[0][_script.size()] = 0;
   script_array[0] = strcpy(script_array[0], _script.c_str());
-  execve(_script.c_str(), script_array, _envv);
+  // execve(_script.c_str(), script_array, _envv);
+  delete[] script_array[0];
+  script_array[0] = new char[69];
+  _script.clear();
   freeEnvv();
-  exit(127);
+  throw std::runtime_error("502 execve error");
+  /* exit(127); */
 }
 
 int CgiHandler::handleGet() {
   if (access(_script.c_str(), F_OK | X_OK))
-      return 403;
+    return 403;
   int pipefd[2];
   if (pipe(pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
@@ -123,14 +128,27 @@ int CgiHandler::handleGet() {
     close(pipefd[0]);
     dup2(pipefd[1], STDOUT_FILENO);
     close(pipefd[1]);
-    _execCGIGet();
+    /* _execCGIGet(); */
+    hashmap env;
+    env = _setEnvGet(_script, _qData);
+    _envv = hashmapToChrArray(env);
+    char *script_array[2];
+    script_array[1] = NULL;
+    script_array[0] = new char[_script.size() + 1];
+    script_array[0][_script.size()] = 0;
+    script_array[0] = strcpy(script_array[0], _script.c_str());
+    execve(_script.c_str(), script_array, _envv);
+    delete[] script_array[0];
+    throw std::runtime_error("502 execve error");
   } else {
     close(pipefd[1]);
     int status;
-    if (waitpid(pid, &status, 0) == -1)
+    if (waitpid(pid, &status, 0) == -1) {
       return 500;
-    if (WIFEXITED(status) && WEXITSTATUS(status))
+    }
+    if (WEXITSTATUS(status) > 0) {
       return 502;
+    }
     char buffer[4096];
     _body = "";
     size_t n;
