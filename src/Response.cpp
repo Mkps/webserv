@@ -20,6 +20,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -279,10 +280,11 @@ void Response::findPath(Request const &req) {
 void Response::httpMethodGet(Request const &req) {
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
-    int ret = cgi.handleGet();
-    if (ret == 200)
+    _statusCode = cgi.handleGet();
+    if (_statusCode == 200)
       _body = cgi.body();
-  } else if (_statusCode == 200) {
+  }
+  if (!req.isCGI() && _statusCode == 200) {
     if (!access(_path.c_str(), F_OK | R_OK))
       setBody(_path);
     else

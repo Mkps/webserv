@@ -10,18 +10,23 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <iostream>
 #include "Server.hpp"
+#include <iostream>
+#include <stdexcept>
 
-int	main(int ac, char **av)
-{
-	if (ac != 2)
-	{
-		std::cout << "Error: Incorrect argument count" << std::endl;
-		return 1;
-	}
-	Server *server = new Server(av[1]);
-	server->run();
-	delete server;
-	return 0;
+int main(int ac, char **av) {
+  if (ac != 2) {
+    std::cout << "Error: Incorrect argument count" << std::endl;
+    return 1;
+  }
+  Server *server = new Server(av[1]);
+  try { server->run();}
+  catch (std::runtime_error const &err) {
+    std::cerr << "Runtime Error: An execution error was encountered."
+              << std::endl;
+    delete server;
+    return 1;
+  }
+  delete server;
+  return 0;
 }
