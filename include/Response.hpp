@@ -58,5 +58,7 @@ class Response {
 		void				httpMethodPost(Request const& req);
 		std::string			findContentType();
         void                findPath(Request const &req);
+
+        friend class HttpRedirect;
 };
 #endif
