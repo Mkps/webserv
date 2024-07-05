@@ -172,8 +172,9 @@ void CgiHandler::_execCGIPost() {
   if (access(_script.c_str(), F_OK | X_OK)) {
     exit(126);
   }
-  int ret = execve(_script.c_str(), script_array, _envv);
-  exit(ret);
+  execve(_script.c_str(), script_array, _envv);
+  delete[] script_array[0];
+  throw std::runtime_error("502 execve error");
 }
 int CgiHandler::handlePost() {
   int stdinPipe[2];
@@ -234,7 +235,7 @@ void setScript(std::string const &script);
 
 void setQueryData(std::string const &qData);
 
-// Helper functions
+// Helper function
 inline char **hashmapToChrArray(hashmap const &map) {
   char **ret;
   ret = new char *[map.size() + 1];
