@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:14:33 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/02 00:40:35 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/05 17:02:43 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class Server {
 		std::vector<Socket *>	_sockets;
 		std::vector<Client *>	_clients;
 		size_t					_id;
-		Configuration			_config;
+		// Configuration			_config;
 
 		static size_t			_nbrOFServ;
 		static Server			*_instance;
