@@ -70,6 +70,75 @@ _id(id)
 	file_stream.close();
 }
 
+static std::string find_end_of_server_config(std::string &line, size_t &nbr_paire_braquet, bool &key_Word_Find, bool &braquet_open)
+{
+	std::string	in_config = std::string();
+	size_t	i = 0;
+	std::string::const_iterator c = line.begin();
+	for (; nbr_paire_braquet && c != line.end(); c++, i++)
+	{
+		if (*c == '{')
+			nbr_paire_braquet++;
+		else if (*c == '}')
+			nbr_paire_braquet--;
+		if (!nbr_paire_braquet)
+			c--;
+	}
+	if (c != line.end())
+	{
+		in_config = line.substr(0, i);
+		line = line.substr(i);
+	}
+	if (!nbr_paire_braquet)
+	{
+		key_Word_Find = false;
+		braquet_open = false;
+	}
+	return (in_config);
+}
+
+static void find_start_of_server_config(std::string &line, size_t &nbr_paire_braquet, const std::string key_Word, bool &key_Word_Find, bool &braquet_open)
+{
+	if (line.compare(0, key_Word.length(), key_Word) == 0)
+	{
+		std::string	afterKeyWord = line.substr(key_Word.length());
+		afterKeyWord.erase(0, afterKeyWord.find_first_not_of(" \t\r\n"));
+		afterKeyWord.erase(afterKeyWord.find_last_not_of(" \t\r\n") + 1);
+		if ((key_Word_Find || braquet_open) && afterKeyWord.empty())
+			throw std::runtime_error("Invalide file.config.\nIl ne peut pas avoir le mot clée server dans ou suivie de server.");
+		if (afterKeyWord.empty())
+			key_Word_Find = true;
+		else if (afterKeyWord[0] == '#')
+			return ;
+		else if (afterKeyWord[0] == '{')
+		{
+			line = line.substr(key_Word.length());
+			line.erase(0, line.find_first_not_of(" \t\r\n"));
+			line.erase(line.find_last_not_of(" \t\r\n") + 1);
+			nbr_paire_braquet++;
+			key_Word_Find = false;
+			braquet_open = true;
+		}
+		else if (key_Word_Find)
+			throw std::runtime_error("Invalide file.config ,\nCe qui doit suivre le mot clée server doit etre une braquet ouvert.");
+	}
+	else if (key_Word_Find && line.compare(0, 1, "{") == 0)
+	{
+		nbr_paire_braquet++;
+		key_Word_Find = false;
+		braquet_open = true;
+	}
+	else if (key_Word_Find && !(line.empty() || line[0] == '#' ))
+		throw std::runtime_error("Invalide file.config .\nCe qui doit suivre le mot clée server doit etre une braquet ouvert.");
+}
+
+static std::string clear_comment(std::string line)
+{
+	if (line.find('#') == std::string::npos)
+		return (line);
+	return (line.substr(0, line.find('#')));
+}
+
 // return un tableau de configuration pour chaque serveur
 std::vector<Configuration> getAllConf(std::string file_config)
 {
@@ -80,31 +149,37 @@ std::vector<Configuration> getAllConf(std::string file_config)
 		throw std::runtime_error("Impossible d'ouvrir ou de lire le fichier de configuration: " + file_config);
 
 	std::vector<Configuration> configurations;
+	std::string configuration_text = "";
 	std::string line;
 	const std::string	key_Word = "server";
 	bool		key_Word_Find = false;
 	bool		braquet_open = false;
+
 	size_t		nbr_paire_braquet = 0;
 	
 	while (std::getline(file_stream, line))
 	{
 		line.erase(0, line.find_first_not_of(" \t\r\n"));
 		line.erase(line.find_last_not_of(" \t\r\n") + 1);
+		line = clear_comment(line);
 
-	
-		if (line.compare(0, key_Word.length(), key_Word) == 0)
+		if (braquet_open)
 		{
-			std::cout << "le mot clée serveur est trouvée, line = " << line << std::endl;
-			std::string	afterKeyWord = line.substr(key_Word.length());
-			afterKeyWord.erase(0, afterKeyWord.find_first_not_of(" \t\r\n"));
-			afterKeyWord.erase(afterKeyWord.find_last_not_of(" \t\r\n") + 1);
-			if (afterKeyWord.empty())
-				key_Word_Find = true;
-			else if (afterKeyWord[0] == '{')
+			configuration_text = configuration_text + find_end_of_server_config(line, nbr_paire_braquet, key_Word_Find, braquet_open);
+			if (!braquet_open)
 			{
-				key_Word_Find = true;
-				braquet_open = true;
+				std::cout << configuration_text << std::endl  << "---------------------------" << std::endl;// ajouter mtn le type config
+				configuration_text = "";
 			}
+		}
+		if (!braquet_open)
+			find_start_of_server_config(line, nbr_paire_braquet, key_Word, key_Word_Find, braquet_open);
+		if (braquet_open && !line.empty() && line[0] != '#')
+			configuration_text = configuration_text + line + "\n";
+		if (!braquet_open && !key_Word_Find && !line.empty() && line[0] != '#' && !(line.length() == 1 && line[0] == ';'))
+		{
+			std::cout << line << std::endl;
+			throw std::runtime_error("Invalide file.config\nmot clée or du config serveur.");
 		}
 	}
 

@@ -18,6 +18,8 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <iterator>
 
 #define NOCOLOR "\033[0m"
 #define RED "\033[31m"
