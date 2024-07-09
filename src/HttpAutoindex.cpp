@@ -32,7 +32,7 @@ inline std::string listDirectories(std::string const &req_path, std::string cons
     closedir(dirp);
     std::ostringstream ss;
     std::sort(v.begin(), v.end());
-    while (!v.empty()) {
+    while (!v.empty()) { //need to find a way to get the current hostname + port
         ss << "<p><a href=\"http://localhost:8000/" << req_path << v.front() << "\">" << v.front() << "</a></p>\n";
         v.erase(v.begin());
     }
