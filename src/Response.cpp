@@ -13,6 +13,7 @@
 #include "Response.hpp"
 #include "CgiHandler.hpp"
 #include "Cookie.hpp"
+#include "HttpAutoindex.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -99,6 +100,14 @@ void Response::processRequest(Request const &req) {
   }
   _statusCode = 200;
   HttpRedirect::handleRedirect(req, *this);
+
+  if (_statusCode == 403 && true) { // if no substitution were found and the autoindex is on
+    _statusCode = 200;
+    _body = HttpAutoindex::generateIndex(req.getFilePath(), _path);
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    setHeader("Content-Type", "text/html", true);
+    return ;
+  }
   if (req.line().getMethod() == "GET") {
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST") {
