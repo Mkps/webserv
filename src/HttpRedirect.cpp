@@ -44,9 +44,10 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response){
          it != tryFiles.end(); ++it) {
       std::string filePath(path + *it);
       if (fileStatus(filePath) == FILE_REG) {
+        response._statusCode = 200;
         response._path = std::string(filePath);
         return;
-      } else if (fileStatus(filePath) != FILE_NOT) {
+      } else {
         response._statusCode = 403;
       }
     }
