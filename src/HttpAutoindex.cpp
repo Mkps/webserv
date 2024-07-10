@@ -36,7 +36,7 @@ inline std::string listDirectories(std::string const &host, std::string const &r
     if (*filepath.end() != '/')
         filepath = req_path +"/";
     std::sort(v.begin(), v.end());
-    while (!v.empty()) { //need to find a way to get the current hostname + port
+    while (!v.empty()) {
         ss << "<p><a href=\"http://"<< host << filepath << v.front() << "\">" << v.front() << "</a></p>\n";
         v.erase(v.begin());
     }
