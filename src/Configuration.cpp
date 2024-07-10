@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 23:53:18 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/05 18:46:35 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/10 19:07:27 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,23 @@ void	add_key_value(std::string str, std::map<std::string, std::vector<std::strin
 
 	std::string value = "";
 	if (i < str.length())
-		value = str.substr(i);
+	{
+		if (str[i] == '"')
+		{
+			i++;
+			size_t	end = i;
+			for (; str[end] != '"' && end < str.length(); end++){}
+			if (str[end] != '"' || end == str.length())
+				throw std::runtime_error("Invalide file.config, une \" n'a pas etais refermée.");
+			value = str.substr(i, end - i);
+			i = end;
+		}
+		else
+			value = str.substr(i);
+	}
+	for (; !(str[i] == ' ' || str[i] == '\t') && i < str.length(); i++){}
+	if (str[i] == ' ' || str[i] == '\t')
+		throw std::runtime_error("Invalide file.config. Il est censée y avoir une clée une valeur et un point virugle");
 	// std::cout << "key = " << key << " | value = " << value << std::endl;
 	param[key].push_back(value);
 }
@@ -122,8 +138,10 @@ void	Configuration::_add_location(std::string str)
 	size_t start = 0;
 	size_t end = 0;
 
-	for (; str[end] != ' ' && str[end] != '\t' && end < str.length(); end++){}
+	for (; str[end] != ' ' && str[end] != '\t' && end < str.length() && str[end] != '{'; end++){}
 
+	if (str[end] == '{')
+		throw std::runtime_error("Invalide file.config.\nIl faut un path pour les locations.");
 	type_of_location = str.substr(0, end);
 	start = end;
 
@@ -158,7 +176,7 @@ _id(id)
 	std::string::iterator no_newline = std::remove(config_str.begin(), config_str.end(), '\n');
 
 	config_str.erase(no_newline, config_str.end());
-
+	// config_str.replace(config_str.begin(), config_str.end(), '\n', ' ');
 	// std::cout << GREEN + config_str + NOCOLOR << std::endl << std::endl;
 
 	for (; i < config_str.length() - 1; i++)
@@ -252,7 +270,6 @@ static std::string clear_comment(std::string line)
 // return un tableau de configuration pour chaque serveur
 std::vector<Configuration> getAllConf(std::string file_config)
 {
-	// 1. Verifier qu'il sagit dun fichier .config ou .conf et qu'on peut l'ouvrire/lire sinon envoyer une exception
 	verifFileConfig(file_config);
 	std::ifstream file_stream(file_config.c_str());
 	if (!file_stream.is_open() || !file_stream.good())
@@ -289,11 +306,13 @@ std::vector<Configuration> getAllConf(std::string file_config)
 		if (!braquet_open && !key_Word_Find && !line.empty() && line[0] != '#' && !(line.length() == 1 && line[0] == ';'))
 		{
 			std::cout << line << std::endl;
-			throw std::runtime_error("Invalide file.config\nmot clée or du config serveur.");
+			throw std::runtime_error("Invalide file.config\nmot clée hors du config serveur.");
 		}
 	}
 
 	file_stream.close();
+	if (nbr_paire_braquet)
+			throw std::runtime_error("Invalide file.config, une Braquette n'a pas etais refermée.");
 	return configurations;
 }
 
@@ -367,7 +386,7 @@ std::vector<std::string>	Configuration::get_all_key(void)
 {
 	std::vector<std::string>	all_key;
 
-	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it !=  this->_param.end(); ++it)
+	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it != this->_param.end(); ++it)
 		all_key.push_back(it->first);
 	return (all_key);
 }
