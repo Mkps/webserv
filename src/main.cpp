@@ -3,30 +3,44 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: obouhlel <obouhlel@student.42.fr>          +#+  +:+       +#+        */
+/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/23 14:15:40 by obouhlel         ###   ########.fr       */
+/*   Updated: 2024/07/10 16:47:14 by aloubier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include "Configuration.hpp"
+
 #include <iostream>
 #include <stdexcept>
 
-int main(int ac, char **av) {
-  if (ac != 2) {
-    std::cout << "Error: Incorrect argument count" << std::endl;
-    return 1;
-  }
-  Server *server = new Server(av[1]);
-  try { server->run();}
-  catch (std::runtime_error const &err) {
-    std::cerr << "Runtime Error: An execution error was encountered."
-              << std::endl;
-    delete server;
-    return 1;
-  }
-  delete server;
-  return 0;
+int	main(int ac, char **av)
+{
+	const std::string defaultfile = "configurations/minimal.config";
+	try
+	{
+		std::string	fileConfig = defaultfile;
+		if (ac > 2)
+			throw std::invalid_argument("Incorrect argument count.");
+		else if (ac == 2)
+			fileConfig = av[1];
+		std::vector<Configuration>	ConfigurationForAllServ = getAllConf(fileConfig);
+		for (std::vector<Configuration>::iterator it = ConfigurationForAllServ.begin(); it != ConfigurationForAllServ.end(); it++)
+		{
+			(*it).show();
+			std::cout << "----------" << std::endl;
+		}
+		
+		// Server *server = new Server(fileConfig);
+		// server->run();
+		// delete server;
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr <<RED "Error: " NOCOLOR << e.what() << '\n';
+		return (1);
+	}
+	return 0;
 }

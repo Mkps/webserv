@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/02 00:40:33 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/05 18:31:57 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,9 +24,10 @@ Server	*Server::_instance = NULL;
 size_t	Server::_nbrOFServ = 1;
 
 Server::Server(std::string config):
-_id(Server::_nbrOFServ),
-_config(config, this->_id)
+_id(Server::_nbrOFServ)//,
+// _config(config, this->_id)
 {
+	(void)	config;
 	Server::_nbrOFServ++;
 	std::cout << "Supposed to open the config here" << std::endl;
 	void	*ptr = NULL;
