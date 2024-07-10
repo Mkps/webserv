@@ -26,7 +26,12 @@ int	main(int ac, char **av)
 		else if (ac == 2)
 			fileConfig = av[1];
 		std::vector<Configuration>	ConfigurationForAllServ = getAllConf(fileConfig);
-
+		for (std::vector<Configuration>::iterator it = ConfigurationForAllServ.begin(); it != ConfigurationForAllServ.end(); it++)
+		{
+			(*it).show();
+			std::cout << "----------" << std::endl;
+		}
+		
 		// Server *server = new Server(fileConfig);
 		// server->run();
 		// delete server;

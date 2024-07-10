@@ -12,6 +12,23 @@
 
 #include "Configuration.hpp"
 
+void	add_key_value(std::string str, std::map<std::string, std::vector<std::string> > &param)
+{
+	size_t i = 0;
+
+	for (; str[i] != ' ' && str[i] != '\t' && i < str.length(); i++){}
+
+	std::string key = str.substr(0, i);
+	for (; (str[i] == ' ' || str[i] == '\t') && i < str.length(); i++){}
+
+	std::string value = "";
+	if (i < str.length())
+		value = str.substr(i);
+	// std::cout << "key = " << key << " | value = " << value << std::endl;
+	param[key].push_back(value);
+}
+
+/////////////////////////////////////////////
 
 Configuration::Configuration():
 _id(size_t())
@@ -23,12 +40,14 @@ Configuration& Configuration::operator=(const Configuration & src)
 {
 	if (this != &src)
 	{
+		this->_locations = src._locations;
+		this->_param = src._param;
 	}
 	return (*this);
 }
 
 Configuration::Configuration(const Configuration & src):
-_id(size_t())
+_id(src.get_id())
 {
 	*this = src;
 }
@@ -36,6 +55,50 @@ _id(size_t())
 Configuration::~Configuration()
 {
 }
+
+////////////////////////////////////////////////////////////////////////
+
+Location::Location()
+{
+}
+
+Location::Location(std::string type_of_location, std::string path, std::string config_location_str):
+_type_of_location(type_of_location),
+_path(path),
+_param()
+{
+	size_t	i = 1;
+	size_t	start = 1;
+	for (; i < config_location_str.length() - 1; i++)
+	{
+		if (config_location_str[i] == ';')
+		{
+			add_key_value(config_location_str.substr(start, i - start), this->_param);
+			start = i + 1;
+		}
+	}
+}
+
+Location& Location::operator=(const Location & src)
+{
+	if (this != &src)
+	{
+		this->_param = src._param;
+		this->_path = src._path;
+		this->_type_of_location = src._type_of_location;
+	}
+	return (*this);
+}
+
+Location::Location(const Location & src)
+{
+	*this = src;
+}
+
+Location::~Location()
+{
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -49,25 +112,72 @@ static void verifFileConfig(std::string file_config)
 	std::string extension = file_config.substr(dot_pos);
 	if (extension != ".con" && extension != ".config")
 		throw std::runtime_error("Le fichier doit avoir une extension .con ou .config: " + file_config);
-
 }
 
+void	Configuration::_add_location(std::string str)
+{
+	std::string type_of_location;
+	std::string path = "";
+	std::string config_location_str;
+	size_t start = 0;
+	size_t end = 0;
+
+	for (; str[end] != ' ' && str[end] != '\t' && end < str.length(); end++){}
+
+	type_of_location = str.substr(0, end);
+	start = end;
+
+	for (; (str[start] == ' ' || str[start] == '\t') && str[end] != '{' && start < str.length(); start++){}
+
+	end = start;
+
+	for (; str[end] != ' ' && str[end] != '\t' && str[end] != '{' && end < str.length(); end++){}
+
+	if (str[start] != '{')
+		path = str.substr(start, end - start);
+
+	for (; str[end] != '{' && end < str.length(); end++){}
+	config_location_str = str.substr(end);
+	this->_locations.push_back(Location(type_of_location, path, config_location_str));
+}
+
+
+
 /// @brief Constructeur parametric de Configuration
-/// @param file_config un fichier de configuration avec la norme
+/// @param config_str une chaine de caractere contant tout ce qu'il y a entre les braquet ouvert et fermé
 /// @param id du serveur, qui est attitré
-Configuration::Configuration(std::string file_config, size_t id):
+Configuration::Configuration(std::string config_str, size_t id):
 _id(id)
 {
-	std::cout << "Pouvoir lire le file config sinon lire le chemin par default" << std::endl;
-	std::cout << "file_config = " << file_config << std::endl;
-	std::cout << "puis ajouter les elements qui sont mis" << std::endl << std::endl;
-	std::cout << "------------------------------------" << std::endl << std::endl;
-	// 1. Verifier qu'il sagit dun fichier .config ou .conf et qu'on peut l'ouvrire/lire sinon envoyer une exception
-	verifFileConfig(file_config);
-	std::ifstream file_stream(file_config.c_str());
-	if (!file_stream.is_open() || !file_stream.good())
-		throw std::runtime_error("Impossible d'ouvrir ou de lire le fichier de configuration: " + file_config);
-	file_stream.close();
+	std::string	param;
+	size_t	i = 1;
+	size_t	start = i;
+	bool	inside_braquet = false;
+	// std::cout << YELLOW + config_str + NOCOLOR << std::endl << std::endl;
+
+	std::string::iterator no_newline = std::remove(config_str.begin(), config_str.end(), '\n');
+
+	config_str.erase(no_newline, config_str.end());
+
+	// std::cout << GREEN + config_str + NOCOLOR << std::endl << std::endl;
+
+	for (; i < config_str.length() - 1; i++)
+	{
+		if (config_str[i] == '{')
+			inside_braquet = true;
+		if (!inside_braquet && config_str[i] == ';')
+		{
+			add_key_value(config_str.substr(start, i - start), this->_param);
+			start = i + 1;
+		}
+		else if (inside_braquet && config_str[i] == '}')
+		{
+			inside_braquet = false;
+			this->_add_location(config_str.substr(start, i - start + 1));
+			start = i + 1;
+		}
+	}
+	
 }
 
 static std::string find_end_of_server_config(std::string &line, size_t &nbr_paire_braquet, bool &key_Word_Find, bool &braquet_open)
@@ -168,7 +278,7 @@ std::vector<Configuration> getAllConf(std::string file_config)
 			configuration_text = configuration_text + find_end_of_server_config(line, nbr_paire_braquet, key_Word_Find, braquet_open);
 			if (!braquet_open)
 			{
-				std::cout << configuration_text << std::endl  << "---------------------------" << std::endl;// ajouter mtn le type config
+				configurations.push_back(Configuration(configuration_text, configurations.size() + 1));
 				configuration_text = "";
 			}
 		}
@@ -185,5 +295,103 @@ std::vector<Configuration> getAllConf(std::string file_config)
 
 	file_stream.close();
 	return configurations;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string					Location::get_type_of_location(void) const
+{
+	return (this->_type_of_location);
+}
+
+std::string					Location::get_path(void) const
+{
+	return (this->_path);
+}
+
+std::vector<std::string>	Location::get_value(std::string key)
+{
+	std::map<std::string, std::vector<std::string> >::const_iterator it = this->_param.find(key);
+
+	if (it != _param.end())
+		return it->second;
+	else
+		return std::vector<std::string>();
+}
+
+std::vector<std::string>	Location::get_all_key(void)
+{
+	std::vector<std::string>	all_key;
+
+	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it !=  this->_param.end(); ++it)
+		all_key.push_back(it->first);
+	return (all_key);
+}
+
+void						Location::show(void)
+{
+	std::vector<std::string> all_key = this->get_all_key();
+
+	std::cout << YELLOW << this->get_type_of_location() << " " << GREEN << this->get_path()  << NOCOLOR << " {" << std::endl;
+	for (std::vector<std::string>::const_iterator it_key = all_key.begin(); it_key != all_key.end(); it_key++)
+	{
+		std::vector<std::string>	values = this->get_value(*it_key);
+		std::cout << "\t" << RED << *it_key << NOCOLOR " = ";
+		for (std::vector<std::string>::const_iterator it_value = values.begin(); it_value != values.end(); it_value++)
+			std::cout << "\"" << BLUE << *it_value << NOCOLOR "\" ";
+		std::cout << ";" << std::endl;
+	}
+	std::cout << "};" << std::endl;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+size_t	Configuration::get_id(void) const
+{
+	return (this->_id);
+}
+
+std::vector<std::string>	Configuration::get_value(std::string key) const
+{
+	std::map<std::string, std::vector<std::string> >::const_iterator it = this->_param.find(key);
+
+	if (it != _param.end())
+		return it->second;
+	else
+		return std::vector<std::string>();
+}
+
+std::vector<std::string>	Configuration::get_all_key(void)
+{
+	std::vector<std::string>	all_key;
+
+	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it !=  this->_param.end(); ++it)
+		all_key.push_back(it->first);
+	return (all_key);
+}
+
+std::vector<Location>		Configuration::get_locations(void) const
+{
+	return (this->_locations);
+}
+
+void						Configuration::show(void)
+{
+	std::cout << "id of configuration : " << this->get_id() << std::endl << "{"<< std::endl;
+
+	std::vector<std::string>	all_key = this->get_all_key();
+	for (std::vector<Location>::iterator it_loc = this->_locations.begin() ; it_loc != this->_locations.end(); it_loc++)
+		(*it_loc).show();
+	for (std::vector<std::string>::const_iterator it_key = all_key.begin(); it_key != all_key.end(); it_key++)
+	{
+		std::vector<std::string>	values = this->get_value(*it_key);
+		std::cout << RED << *it_key << NOCOLOR " = ";
+		for (std::vector<std::string>::const_iterator it_value = values.begin(); it_value != values.end(); it_value++)
+			std::cout << "\"" << BLUE << *it_value << NOCOLOR "\" ";
+		std::cout << ";" << std::endl;
+	}
+	std::cout << "}" << std::endl;
 }
 
