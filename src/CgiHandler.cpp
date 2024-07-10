@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -51,6 +52,15 @@ hashmap CgiHandler::_setEnvPost(const std::string &script,
 // ### Constructors/Coplien
 CgiHandler::CgiHandler() { _envv = NULL; }
 
+CgiHandler::CgiHandler(std::string const &uri) {
+  _envv = NULL;
+  _script = uri;
+  size_t query_pos = _script.find("?");
+  if (query_pos != std::string::npos) {
+    _qData = _script.substr(query_pos + 1);
+    _script = _script.substr(0, query_pos);
+  }
+}
 CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
   _envv = NULL;
   _script = script;
@@ -60,12 +70,22 @@ CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
 CgiHandler::~CgiHandler() {
   if (_envv) {
     for (int i = 0; _envv[i] != NULL; ++i) {
-      delete _envv[i];
+      delete[] _envv[i];
     }
     delete[] _envv;
+    _envv = NULL;
   }
 }
 
+void CgiHandler::freeEnvv() {
+  if (_envv) {
+    for (int i = 0; _envv[i] != NULL; ++i) {
+      delete[] _envv[i];
+    }
+    delete[] _envv;
+    _envv = NULL;
+  }
+}
 CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
 
 CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
@@ -82,11 +102,18 @@ void CgiHandler::_execCGIGet() {
   script_array[0] = new char[_script.size() + 1];
   script_array[0][_script.size()] = 0;
   script_array[0] = strcpy(script_array[0], _script.c_str());
-  execve(_script.c_str(), script_array, _envv);
-  exit(127);
+  // execve(_script.c_str(), script_array, _envv);
+  delete[] script_array[0];
+  script_array[0] = new char[69];
+  _script.clear();
+  freeEnvv();
+  throw std::runtime_error("502 execve error");
+  /* exit(127); */
 }
 
 int CgiHandler::handleGet() {
+  if (access(_script.c_str(), F_OK | X_OK))
+    return 403;
   int pipefd[2];
   if (pipe(pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
@@ -101,14 +128,27 @@ int CgiHandler::handleGet() {
     close(pipefd[0]);
     dup2(pipefd[1], STDOUT_FILENO);
     close(pipefd[1]);
-    _execCGIGet();
+    /* _execCGIGet(); */
+    hashmap env;
+    env = _setEnvGet(_script, _qData);
+    _envv = hashmapToChrArray(env);
+    char *script_array[2];
+    script_array[1] = NULL;
+    script_array[0] = new char[_script.size() + 1];
+    script_array[0][_script.size()] = 0;
+    script_array[0] = strcpy(script_array[0], _script.c_str());
+    execve(_script.c_str(), script_array, _envv);
+    delete[] script_array[0];
+    throw std::runtime_error("502 execve error");
   } else {
     close(pipefd[1]);
     int status;
-    if (waitpid(pid, &status, 0) == -1)
+    if (waitpid(pid, &status, 0) == -1) {
       return 500;
-    if (WIFEXITED(status) && WEXITSTATUS(status))
+    }
+    if (WEXITSTATUS(status) > 0) {
       return 502;
+    }
     char buffer[4096];
     _body = "";
     size_t n;
@@ -119,7 +159,6 @@ int CgiHandler::handleGet() {
   }
   return 200;
 }
-
 
 void CgiHandler::_execCGIPost() {
   hashmap env;
@@ -133,8 +172,9 @@ void CgiHandler::_execCGIPost() {
   if (access(_script.c_str(), F_OK | X_OK)) {
     exit(126);
   }
-  int ret = execve(_script.c_str(), script_array, _envv);
-  exit(ret);
+  execve(_script.c_str(), script_array, _envv);
+  delete[] script_array[0];
+  throw std::runtime_error("502 execve error");
 }
 int CgiHandler::handlePost() {
   int stdinPipe[2];
@@ -195,7 +235,7 @@ void setScript(std::string const &script);
 
 void setQueryData(std::string const &qData);
 
-// Helper functions
+// Helper function
 inline char **hashmapToChrArray(hashmap const &map) {
   char **ret;
   ret = new char *[map.size() + 1];
@@ -209,4 +249,3 @@ inline char **hashmapToChrArray(hashmap const &map) {
   }
   return ret;
 }
-
