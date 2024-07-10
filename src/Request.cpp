@@ -29,8 +29,8 @@ Request::Request(std::string const &request) : _requestLine(request) {
 Request::Request(Request const &src) { *this = src; }
 
 Request &Request::operator=(Request const &rhs) {
-  _requestLine = rhs.getRequestLine();
-  _requestHeaders = rhs.getRequestHeaders();
+  _requestLine = rhs.line();
+  _requestHeaders = rhs.headers();
   return *this;
 }
 
@@ -51,10 +51,10 @@ void Request::setRequest(std::string const &request) {
 
 Request const &Request::getRequest() const { return *this; }
 
-RequestLine const &Request::getRequestLine() const { return _requestLine; }
-std::string const &Request::getRequestBody() const { return _body; }
+RequestLine const &Request::line() const { return _requestLine; }
+std::string const &Request::body() const { return _body; }
 
-hashmap const &Request::getRequestHeaders() const { return _requestHeaders; }
+hashmap const &Request::headers() const { return _requestHeaders; }
 
 inline void trim(std::string &s) {
   size_t first = s.find_first_not_of(' ');

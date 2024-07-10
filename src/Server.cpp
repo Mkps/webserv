@@ -190,7 +190,7 @@ int Server::_handleClientsEvent(void)
 			continue;
 		if (client->getRequest().empty())
 			continue;
-		_handleClientResponse(client);
+        client->handleResponse();
 	}
 	return (EXIT_SUCCESS);
 }
