@@ -100,10 +100,14 @@ void Response::processRequest(Request const &req) {
   }
   _statusCode = 200;
   HttpRedirect::handleRedirect(req, *this);
+  std::string s = "No host set";
+  if (req.headers().find("host") != req.headers().end())
+      s = req.headers().find("host")->second;
+  std::cout << s << std::endl;
 
   if (_statusCode == 403 && true) { // if no substitution were found and the autoindex is on
     _statusCode = 200;
-    _body = HttpAutoindex::generateIndex(req.getFilePath(), _path);
+    _body = HttpAutoindex::generateIndex(req,_path);
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", "text/html", true);
     return ;
