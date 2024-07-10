@@ -13,6 +13,7 @@
 #include "Response.hpp"
 #include "CgiHandler.hpp"
 #include "Cookie.hpp"
+#include "HttpAutoindex.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -20,11 +21,11 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+#include "HttpRedirect.hpp"
 
 Response::Response() { setDefaultHeaders(); }
 
@@ -98,7 +99,15 @@ void Response::processRequest(Request const &req) {
     return;
   }
   _statusCode = 200;
-  findPath(req);
+  HttpRedirect::handleRedirect(req, *this);
+
+  if (_statusCode == 403 && true) { // if no substitution were found and the autoindex is on
+    _statusCode = 200;
+    _body = HttpAutoindex::generateIndex(req.getFilePath(), _path);
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    setHeader("Content-Type", "text/html", true);
+    return ;
+  }
   if (req.line().getMethod() == "GET") {
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST") {
@@ -178,7 +187,7 @@ std::string Response::findContentType() {
 
 void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date(), true);
-  setHeader("Content-Length", "42", true);
+  setHeader("Content-Length", "", true);
   setHeader("Content-Type", "text/plain", true);
   setHeader("Connection", "close", true);
   setHeader("Charset", "UTF-8", true);
@@ -191,7 +200,7 @@ void Response::clear() {
   setDefaultHeaders();
 }
 std::string Response::chunkResponse() {
-  const size_t chunk_size = 1024; // Adjust this size as needed for the example
+  const size_t chunk_size = 1024;
   std::string chunked_body;
 
   if (_offset < _body.size()) {
@@ -205,7 +214,6 @@ std::string Response::chunkResponse() {
   return chunked_body;
 }
 void Response::sendResponse(int clientSocket) {
-  // std::string res = writeHeader() + _body + "\r\n\r\n";
   std::ostringstream res;
   _offset = 0;
   _bytes_sent = 0;
