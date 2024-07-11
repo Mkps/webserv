@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 23:53:18 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/10 19:07:27 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/11 15:29:09 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ static void verifFileConfig(std::string file_config)
 		throw std::runtime_error("Le fichier doit avoir une extension .con ou .config: " + file_config);
 }
 
-void	Configuration::_add_location(std::string str)
+void	Configuration::_add_location(std::string str)// ici doit verifier si on as un eleent en plus
 {
 	std::string type_of_location;
 	std::string path = "";
