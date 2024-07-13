@@ -6,7 +6,7 @@
 #    By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/08/30 16:10:19 by aloubier          #+#    #+#              #
-#    Updated: 2024/07/02 00:22:37 by yzaoui           ###   ########.fr        #
+#    Updated: 2024/07/13 15:40:17 by yzaoui           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,19 +18,20 @@ INC_DIR = ./include/
 
 OBJ_DIR = build/
 
-SRC_FILES = main.cpp \
-			Cookie.cpp \
-			Socket.cpp \
-			CgiHandler.cpp \
-			Client.cpp \
-			Server.cpp \
-			Request.cpp \
-			RequestLine.cpp \
-			Response.cpp \
-			HttpRedirect.cpp \
-			HttpAutoindex.cpp \
-			http_utils.cpp	\
-			Configuration.cpp
+SRC_FILES = main.cpp			\
+			Cookie.cpp			\
+			Socket.cpp			\
+			CgiHandler.cpp		\
+			Client.cpp			\
+			Server.cpp			\
+			Request.cpp			\
+			RequestLine.cpp		\
+			Response.cpp		\
+			HttpRedirect.cpp	\
+			HttpAutoindex.cpp	\
+			http_utils.cpp		\
+			Configuration.cpp	\
+			Location.cpp
 
 SRC = $(addprefix $(SRC_DIR), $(SRC_FILES))
 

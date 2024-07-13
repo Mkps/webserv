@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 15:45:38 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/10 15:51:38 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/13 15:41:38 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,8 @@
 #define CYAN "\033[36m"
 #define WHITE "\033[37m"
 #define PURPLE "\033[35m"
+
+void	add_key_value(std::string str, std::map<std::string, std::vector<std::string> > &param);
 
 /// @brief class contenant les configuration en fonction des location
 class Location

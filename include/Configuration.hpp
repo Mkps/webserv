@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 20:23:45 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/10 15:51:32 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/13 16:01:49 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ public:
 	std::vector<std::string>	get_value(std::string key) const;
 	std::vector<std::string>	get_all_key(void);
 	std::vector<Location>		get_locations(void) const;
+	std::vector<Location>		get_locations_by_path(std::string path) const;
 	void						show(void);
 };
 
