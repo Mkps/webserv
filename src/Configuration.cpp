@@ -6,27 +6,11 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 23:53:18 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/05 18:46:35 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/13 16:06:47 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Configuration.hpp"
-
-void	add_key_value(std::string str, std::map<std::string, std::vector<std::string> > &param)
-{
-	size_t i = 0;
-
-	for (; str[i] != ' ' && str[i] != '\t' && i < str.length(); i++){}
-
-	std::string key = str.substr(0, i);
-	for (; (str[i] == ' ' || str[i] == '\t') && i < str.length(); i++){}
-
-	std::string value = "";
-	if (i < str.length())
-		value = str.substr(i);
-	// std::cout << "key = " << key << " | value = " << value << std::endl;
-	param[key].push_back(value);
-}
 
 /////////////////////////////////////////////
 
@@ -56,52 +40,6 @@ Configuration::~Configuration()
 {
 }
 
-////////////////////////////////////////////////////////////////////////
-
-Location::Location()
-{
-}
-
-Location::Location(std::string type_of_location, std::string path, std::string config_location_str):
-_type_of_location(type_of_location),
-_path(path),
-_param()
-{
-	size_t	i = 1;
-	size_t	start = 1;
-	for (; i < config_location_str.length() - 1; i++)
-	{
-		if (config_location_str[i] == ';')
-		{
-			add_key_value(config_location_str.substr(start, i - start), this->_param);
-			start = i + 1;
-		}
-	}
-}
-
-Location& Location::operator=(const Location & src)
-{
-	if (this != &src)
-	{
-		this->_param = src._param;
-		this->_path = src._path;
-		this->_type_of_location = src._type_of_location;
-	}
-	return (*this);
-}
-
-Location::Location(const Location & src)
-{
-	*this = src;
-}
-
-Location::~Location()
-{
-}
-
-
-////////////////////////////////////////////////////////////////////////
-
 // 1. Verifier qu'il sagit dun fichier .config ou .conf et qu'on peut l'ouvrire/lire sinon envoyer une exception
 static void verifFileConfig(std::string file_config)
 {
@@ -122,26 +60,28 @@ void	Configuration::_add_location(std::string str)
 	size_t start = 0;
 	size_t end = 0;
 
-	for (; str[end] != ' ' && str[end] != '\t' && end < str.length(); end++){}
+	for (; str[end] != ' ' && str[end] != '\t' && end < str.length() && str[end] != '{'; end++){}
 
+	if (str[end] == '{')
+		throw std::runtime_error("Invalide file.config.\nIl faut un path pour les locations.");
 	type_of_location = str.substr(0, end);
 	start = end;
 
-	for (; (str[start] == ' ' || str[start] == '\t') && str[end] != '{' && start < str.length(); start++){}
+	for (; (str[start] == ' ' || str[start] == '\t') && str[start] != '{' && start < str.length(); start++){}
 
+	if (str[start] == '{')
+		throw std::runtime_error("Invalide file.config.\nIl faut un path pour les locations.");
 	end = start;
 
 	for (; str[end] != ' ' && str[end] != '\t' && str[end] != '{' && end < str.length(); end++){}
 
-	if (str[start] != '{')
-		path = str.substr(start, end - start);
-
-	for (; str[end] != '{' && end < str.length(); end++){}
+	path = str.substr(start, end - start);
+	for (; (str[end] == ' ' || str[end] == '\t') && str[end] != '{' && end < str.length(); end++){}
+	if (str[end] != '{')
+		throw std::runtime_error("Invalide file.config.\nCe qui suit le path d'une location est une braquette ouverte.");
 	config_location_str = str.substr(end);
 	this->_locations.push_back(Location(type_of_location, path, config_location_str));
 }
-
-
 
 /// @brief Constructeur parametric de Configuration
 /// @param config_str une chaine de caractere contant tout ce qu'il y a entre les braquet ouvert et fermé
@@ -158,7 +98,7 @@ _id(id)
 	std::string::iterator no_newline = std::remove(config_str.begin(), config_str.end(), '\n');
 
 	config_str.erase(no_newline, config_str.end());
-
+	// config_str.replace(config_str.begin(), config_str.end(), '\n', ' ');
 	// std::cout << GREEN + config_str + NOCOLOR << std::endl << std::endl;
 
 	for (; i < config_str.length() - 1; i++)
@@ -179,6 +119,71 @@ _id(id)
 	}
 	
 }
+
+size_t	Configuration::get_id(void) const
+{
+	return (this->_id);
+}
+
+std::vector<std::string>	Configuration::get_value(std::string key) const
+{
+	std::map<std::string, std::vector<std::string> >::const_iterator it = this->_param.find(key);
+
+	if (it != _param.end())
+		return it->second;
+	else
+		return std::vector<std::string>();
+}
+
+std::vector<std::string>	Configuration::get_all_key(void)
+{
+	std::vector<std::string>	all_key;
+
+	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it != this->_param.end(); ++it)
+		all_key.push_back(it->first);
+	return (all_key);
+}
+
+std::vector<Location>		Configuration::get_locations(void) const
+{
+	return (this->_locations);
+}
+
+std::vector<Location>		Configuration::get_locations_by_path(std::string path) const
+{
+	std::vector<Location>::const_iterator it = this->_locations.begin();
+
+	std::vector<Location> res = std::vector<Location>();
+	for (; it != this->_locations.end(); it++)
+	{
+		if (it->get_path() == path)
+			res.push_back(*it);
+	}
+	return res;
+
+}
+
+
+void	Configuration::show(void)
+{
+	std::cout << "id of configuration : " << this->get_id() << std::endl << "{"<< std::endl;
+
+	std::vector<std::string>	all_key = this->get_all_key();
+	for (std::vector<Location>::iterator it_loc = this->_locations.begin() ; it_loc != this->_locations.end(); it_loc++)
+		(*it_loc).show();
+	for (std::vector<std::string>::const_iterator it_key = all_key.begin(); it_key != all_key.end(); it_key++)
+	{
+		std::vector<std::string>	values = this->get_value(*it_key);
+		std::cout << RED << *it_key << NOCOLOR " = ";
+		for (std::vector<std::string>::const_iterator it_value = values.begin(); it_value != values.end(); it_value++)
+			std::cout << "\"" << BLUE << *it_value << NOCOLOR "\" ";
+		std::cout << ";" << std::endl;
+	}
+	std::cout << "}" << std::endl;
+}
+
+////////////////////////////////////////////////////////////////////////
+
 
 static std::string find_end_of_server_config(std::string &line, size_t &nbr_paire_braquet, bool &key_Word_Find, bool &braquet_open)
 {
@@ -252,7 +257,6 @@ static std::string clear_comment(std::string line)
 // return un tableau de configuration pour chaque serveur
 std::vector<Configuration> getAllConf(std::string file_config)
 {
-	// 1. Verifier qu'il sagit dun fichier .config ou .conf et qu'on peut l'ouvrire/lire sinon envoyer une exception
 	verifFileConfig(file_config);
 	std::ifstream file_stream(file_config.c_str());
 	if (!file_stream.is_open() || !file_stream.good())
@@ -289,109 +293,13 @@ std::vector<Configuration> getAllConf(std::string file_config)
 		if (!braquet_open && !key_Word_Find && !line.empty() && line[0] != '#' && !(line.length() == 1 && line[0] == ';'))
 		{
 			std::cout << line << std::endl;
-			throw std::runtime_error("Invalide file.config\nmot clée or du config serveur.");
+			throw std::runtime_error("Invalide file.config\nmot clée hors du config serveur.");
 		}
 	}
 
 	file_stream.close();
+	if (nbr_paire_braquet)
+			throw std::runtime_error("Invalide file.config, une Braquette n'a pas etais refermée.");
 	return configurations;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-std::string					Location::get_type_of_location(void) const
-{
-	return (this->_type_of_location);
-}
-
-std::string					Location::get_path(void) const
-{
-	return (this->_path);
-}
-
-std::vector<std::string>	Location::get_value(std::string key)
-{
-	std::map<std::string, std::vector<std::string> >::const_iterator it = this->_param.find(key);
-
-	if (it != _param.end())
-		return it->second;
-	else
-		return std::vector<std::string>();
-}
-
-std::vector<std::string>	Location::get_all_key(void)
-{
-	std::vector<std::string>	all_key;
-
-	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it !=  this->_param.end(); ++it)
-		all_key.push_back(it->first);
-	return (all_key);
-}
-
-void						Location::show(void)
-{
-	std::vector<std::string> all_key = this->get_all_key();
-
-	std::cout << YELLOW << this->get_type_of_location() << " " << GREEN << this->get_path()  << NOCOLOR << " {" << std::endl;
-	for (std::vector<std::string>::const_iterator it_key = all_key.begin(); it_key != all_key.end(); it_key++)
-	{
-		std::vector<std::string>	values = this->get_value(*it_key);
-		std::cout << "\t" << RED << *it_key << NOCOLOR " = ";
-		for (std::vector<std::string>::const_iterator it_value = values.begin(); it_value != values.end(); it_value++)
-			std::cout << "\"" << BLUE << *it_value << NOCOLOR "\" ";
-		std::cout << ";" << std::endl;
-	}
-	std::cout << "};" << std::endl;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-size_t	Configuration::get_id(void) const
-{
-	return (this->_id);
-}
-
-std::vector<std::string>	Configuration::get_value(std::string key) const
-{
-	std::map<std::string, std::vector<std::string> >::const_iterator it = this->_param.find(key);
-
-	if (it != _param.end())
-		return it->second;
-	else
-		return std::vector<std::string>();
-}
-
-std::vector<std::string>	Configuration::get_all_key(void)
-{
-	std::vector<std::string>	all_key;
-
-	for (std::map<std::string, std::vector<std::string> >::iterator it = this->_param.begin(); it !=  this->_param.end(); ++it)
-		all_key.push_back(it->first);
-	return (all_key);
-}
-
-std::vector<Location>		Configuration::get_locations(void) const
-{
-	return (this->_locations);
-}
-
-void						Configuration::show(void)
-{
-	std::cout << "id of configuration : " << this->get_id() << std::endl << "{"<< std::endl;
-
-	std::vector<std::string>	all_key = this->get_all_key();
-	for (std::vector<Location>::iterator it_loc = this->_locations.begin() ; it_loc != this->_locations.end(); it_loc++)
-		(*it_loc).show();
-	for (std::vector<std::string>::const_iterator it_key = all_key.begin(); it_key != all_key.end(); it_key++)
-	{
-		std::vector<std::string>	values = this->get_value(*it_key);
-		std::cout << RED << *it_key << NOCOLOR " = ";
-		for (std::vector<std::string>::const_iterator it_value = values.begin(); it_value != values.end(); it_value++)
-			std::cout << "\"" << BLUE << *it_value << NOCOLOR "\" ";
-		std::cout << ";" << std::endl;
-	}
-	std::cout << "}" << std::endl;
 }
 
