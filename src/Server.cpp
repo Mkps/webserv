@@ -49,6 +49,30 @@ _id(Server::_nbrOFServ)//,
 	}
 }
 
+Server::Server(Configuration conf):
+_id(Server::_nbrOFServ)
+{
+	Server::_nbrOFServ++;
+	std::cout << "Supposed to open the config here" << std::endl;
+	void	*ptr = NULL;
+
+	ptr = _createSocket("127.0.0.1", 8000);
+	if (!ptr)
+	{
+		std::cerr << "Failed to create socket" << std::endl;
+		delete this;
+		exit(1);
+	}
+
+	ptr = _createSocket("127.0.0.1", 8001);
+	if (!ptr)
+	{
+		std::cerr << "Failed to create socket" << std::endl;
+		delete this;
+		exit(1);
+	}
+}
+
 Server::~Server(void)
 {
 	Server::_nbrOFServ--;
