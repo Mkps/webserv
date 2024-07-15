@@ -49,7 +49,7 @@ _id(Server::_nbrOFServ)//,
 	}
 }
 
-Server::Server(std::vector<Configuration> vConf):
+Server::Server(std::vector<Configuration> const &vConf):
 _id(vConf.size())
 {
 	Server::_nbrOFServ++;
@@ -84,6 +84,7 @@ _id(vConf.size())
 
 Server::~Server(void)
 {
+    std::cerr << "Quitting" << std::endl;
 	Server::_nbrOFServ--;
 	for (size_t i = 0; i < _sockets.size(); i++)
 	{

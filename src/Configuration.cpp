@@ -38,6 +38,8 @@ _id(src.get_id())
 
 Configuration::~Configuration()
 {
+    while (!_locations.empty())
+        _locations.pop_back();
 }
 
 // 1. Verifier qu'il sagit dun fichier .config ou .conf et qu'on peut l'ouvrire/lire sinon envoyer une exception

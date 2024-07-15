@@ -193,7 +193,7 @@ void Response::setDefaultHeaders() {
   setHeader("Date", get_current_date(), true);
   setHeader("Content-Length", "", true);
   setHeader("Content-Type", "text/plain", true);
-  setHeader("Connection", "close", true);
+  setHeader("Connection", "keep-alive", true);
   setHeader("Charset", "UTF-8", true);
   setHeader("Server", "webserv/0.1", true);
 }
