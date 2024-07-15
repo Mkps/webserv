@@ -31,7 +31,7 @@ int main(int ac, char **av) {
       (*it).show();
       std::cout << "----------" << std::endl;
     }
-    Server *server = new Server(fileConfig);
+    Server *server = new Server(ConfigurationForAllServ);
     server->run();
     delete server;
   } catch (const std::exception &e) {

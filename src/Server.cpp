@@ -49,28 +49,37 @@ _id(Server::_nbrOFServ)//,
 	}
 }
 
-Server::Server(Configuration conf):
-_id(Server::_nbrOFServ)
+Server::Server(std::vector<Configuration> vConf):
+_id(vConf.size())
 {
 	Server::_nbrOFServ++;
-	std::cout << "Supposed to open the config here" << std::endl;
-	void	*ptr = NULL;
-
-	ptr = _createSocket("127.0.0.1", 8000);
-	if (!ptr)
-	{
-		std::cerr << "Failed to create socket" << std::endl;
-		delete this;
-		exit(1);
-	}
-
-	ptr = _createSocket("127.0.0.1", 8001);
-	if (!ptr)
-	{
-		std::cerr << "Failed to create socket" << std::endl;
-		delete this;
-		exit(1);
-	}
+    void *ptr = NULL;
+    for (size_t i = 0; i < vConf.size() ; ++i) {
+        std::string host;
+        int port;
+        if (vConf[i].get_value("host").empty())
+            host = "127.0.0.1";
+        else
+            host = vConf[i].get_value("host")[0];
+        if (vConf[i].get_value("listen").empty())
+            port = 80;
+        else
+            port = strtod(vConf[i].get_value("listen")[0].c_str(), NULL);
+        ptr = _createSocket(host, port);
+        if (!ptr)
+        {
+            std::cerr << "Failed to create socket" << std::endl;
+            delete this;
+            exit(1);
+        }
+    }
+	/*ptr = _createSocket("127.0.0.1", 8000);*/
+	/*if (!ptr)*/
+	/*{*/
+	/*	std::cerr << "Failed to create socket" << std::endl;*/
+	/*	delete this;*/
+	/*	exit(1);*/
+	/*}*/
 }
 
 Server::~Server(void)

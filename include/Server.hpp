@@ -28,6 +28,7 @@ class Client;
 class Server {
 	public:
 		Server(std::string config);
+        Server(std::vector<Configuration> vConf);
 		~Server();
 
 		std::vector<s_pollfd>	getPollfds() const;
