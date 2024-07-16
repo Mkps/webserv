@@ -12,8 +12,10 @@
 
 #include "Response.hpp"
 #include "CgiHandler.hpp"
+#include "Client.hpp"
 #include "Cookie.hpp"
 #include "HttpAutoindex.hpp"
+#include "HttpRedirect.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
 #include <cstdlib>
@@ -25,7 +27,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
-#include "HttpRedirect.hpp"
 
 Response::Response() { setDefaultHeaders(); }
 
@@ -93,26 +94,66 @@ inline std::string getResponse(short status) {
     return "Bad Request";
 }
 
-void Response::processRequest(Request const &req) {
+inline bool isAllowedMethod(std::string s, std::vector<std::string> v) {
+  size_t pos = 0;
+  size_t start = 0;
+  std::cout << "calling  iam " << std::endl;
+  while ((pos = v[0].find("|")) != v[0].npos) {
+    std::cout << v[0].substr(start, pos) << std::endl;
+    if (v[0].substr(start, pos) == s)
+      return true;
+    start = pos;
+  }
+  if (v[0].substr(start, pos) == s)
+    return true;
+  return false;
+}
+void Response::processRequest(Request const &req, Client const &client) {
   if (req.validateRequest() < 0) {
     setBodyError(400);
     return;
   }
+  std::cout << "####### LOCATION #############" << std::endl;
+  std::cout << "Currently using Client " << client << std::endl;
+  client.getConfig().get_locations()[0].show();
+  std::cout << "####### LOCATION #############" << std::endl;
+  std::cout << "####### CONFIG TEST #############" << std::endl;
+  std::vector<Location> loc =
+      client.getConfig().get_locations_by_path(req.getFilePath());
+  /*if (!loc.empty()) {*/
+  /*  std::vector<std::string> vec = loc[0].get_value("allowedMethods");*/
+  /*  for (size_t i = 0; i < vec.size(); ++i) {*/
+  /*    std::cout << "allowed methods ||" << vec[i] << std::endl;*/
+  /*  }*/
+  /*  std::vector<std::string> error =
+   * client.getConfig().get_value("error_page");*/
+  /*  for (size_t i = 0; i < error.size(); ++i) {*/
+  /*    std::cout << "error page " << error[i] << std::endl;*/
+  /*  }*/
+  /*}*/
+  std::cout << "####### CONFIG TEST #############" << std::endl;
   _statusCode = 200;
   HttpRedirect::handleRedirect(req, *this);
   std::string s = "No host set";
   if (req.headers().find("host") != req.headers().end())
-      s = req.headers().find("host")->second;
-  std::cout << s << std::endl;
-
-  if (_statusCode == 403 && true) { // if no substitution were found and the autoindex is on
+    s = req.headers().find("host")->second;
+  if (_statusCode == 403 &&
+      !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
+      client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
+          "on") { // if no substitution were found and the autoindex is on
     _statusCode = 200;
-    _body = HttpAutoindex::generateIndex(req,_path);
+    _body = HttpAutoindex::generateIndex(req, _path);
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", "text/html", true);
-    return ;
+    return;
   }
-  if (req.line().getMethod() == "GET") {
+  std::vector<std::string> vec;
+  if (!loc.empty()) {
+    std::vector<std::string> vec = loc[0].get_value("allowedMethods");
+    if (!vec[0].empty() && !isAllowedMethod(req.line().getMethod(), vec)) {
+      _statusCode = 405;
+    }
+  } else if (req.line().getMethod() == "GET") {
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST") {
     httpMethodPost(req);

@@ -18,6 +18,7 @@
 
 typedef std::map<std::string, std::string> hashmap;
 class Request;
+class Client;
 class Response {
 	private:
 		short		_statusCode;
@@ -48,7 +49,7 @@ class Response {
 
 		void				clear();
 		std::string			writeHeader();
-		void				processRequest(Request const & req);
+		void				processRequest(Request const & req, Client const &client);
 		void				sendResponse(int clientSocket);
 		std::string			chunkResponse();
 
