@@ -52,13 +52,14 @@ _id(Server::_nbrOFServ)//,
 Server::Server(std::vector<Configuration> const &vConf):
 _id(vConf.size())
 {
+    _config = vConf;
 	Server::_nbrOFServ++;
     void *ptr = NULL;
     for (size_t i = 0; i < vConf.size() ; ++i) {
         std::string host;
         int port;
         if (vConf[i].get_value("host").empty())
-            host = "127.0.0.1";
+            host = "0.0.0.0";
         else
             host = vConf[i].get_value("host")[0];
         if (vConf[i].get_value("listen").empty())
@@ -73,13 +74,6 @@ _id(vConf.size())
             exit(1);
         }
     }
-	/*ptr = _createSocket("127.0.0.1", 8000);*/
-	/*if (!ptr)*/
-	/*{*/
-	/*	std::cerr << "Failed to create socket" << std::endl;*/
-	/*	delete this;*/
-	/*	exit(1);*/
-	/*}*/
 }
 
 Server::~Server(void)
@@ -125,14 +119,14 @@ Socket *Server::_createSocket(std::string ip, int port)
 	return s;
 }
 
-Client *Server::_createClient(Socket *socket)
+Client *Server::_createClient(Socket *socket, Configuration const &conf)
 {
 	static size_t	id = 0;
 
 	Client	*client = NULL;
 	try
 	{
-		client = new Client(socket, id++);
+		client = new Client(socket, id++, conf);
 	}
 	catch (std::exception &e)
 	{
@@ -195,7 +189,7 @@ int Server::_handleNewConnection(void)
 		if (!(_pollfds[i].revents & POLLIN))
 			continue;
 		std::cout << "\tNew connection on " << *_sockets[i] << std::endl;
-		ptr = _createClient(_sockets[i]);
+		ptr = _createClient(_sockets[i], _config[i]);
 		if (!ptr)
 			return (EXIT_FAILURE);
 		return (NEW_CLIENT_CONNECTED);
