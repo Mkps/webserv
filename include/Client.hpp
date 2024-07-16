@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Configuration.hpp"
 
 class Socket;
 
@@ -16,7 +17,8 @@ enum e_client_state {
 
 class Client {
 	public:
-		Client(Socket *socket, size_t id);
+//		Client(Socket *socket, size_t id);
+		Client(Socket *socket, size_t id, Configuration _config);
 		~Client(void);
 
 		Socket		*getSocket() const;
@@ -24,6 +26,7 @@ class Client {
 		size_t		getId() const;
 		int			getFd() const;
 		std::string	getRequest() const;
+        Configuration const &getConfig() const;
 		void		clearRequest(void);
 
 		int			recvRequest();
@@ -36,6 +39,7 @@ class Client {
 		Request		_req;
 		std::string	_ip;
 		size_t		_id;
+        Configuration _config;
 		int			_fd;
 		std::string	_request;
 };

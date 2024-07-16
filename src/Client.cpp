@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include "Configuration.hpp"
 #include "Socket.hpp"
 #include <iostream>
 #include <sys/socket.h>
@@ -6,7 +7,7 @@
 #include <unistd.h>
 #include <cstring>
 
-Client::Client(Socket *socket, size_t id): _socket(socket), _id(id)
+Client::Client(Socket *socket, size_t id, Configuration config): _socket(socket), _id(id), _config(config)
 {
 	struct sockaddr	addr;
 	socklen_t		addr_len = sizeof(addr);
@@ -38,6 +39,8 @@ size_t	Client::getId() const { return _id; }
 int	Client::getFd() const { return _fd; }
 
 std::string	Client::getRequest() const { return _request; }
+
+Configuration const &Client::getConfig() const { return _config; }
 
 void Client::clearRequest(void) { _request.clear(); }
 
@@ -78,7 +81,7 @@ std::ostream & operator<<(std::ostream & o, Client const & r)
 }
 
 void	Client::handleResponse(){
-	_res.processRequest(_req);
+	_res.processRequest(_req, *this);
 	_res.sendResponse(_fd);
 	_res.clear();
 	return ;
