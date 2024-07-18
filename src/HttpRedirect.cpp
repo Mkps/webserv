@@ -29,6 +29,8 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response) {
     return;
   }
   response._path = path;
+  if (req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR)
+    return;
   if (req.isCGI())
     return;
   // Check for redirection here
