@@ -61,7 +61,7 @@ int	Client::recvRequest(void)
 		else
 		{
 			buffer[ret] = 0;
-			_request.append(buffer);
+			_request.append(buffer, ret);
 		}
 	}
 	_req.setRequest(_request);
