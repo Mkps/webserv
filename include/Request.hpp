@@ -19,12 +19,12 @@
 typedef std::map<std::string, std::string> hashmap;
 class Request {
 private:
-  RequestLine 	_requestLine;
-  hashmap		_requestHeaders;
-  std::string	_body;
-  void			retrieveHeaders(std::string const &request);
-  void			fetchData(std::string const &request);
-  int			initData(); // will eventually be taken over by Server->conf
+  RequestLine _requestLine;
+  hashmap _requestHeaders;
+  std::string _body;
+  void retrieveHeaders(std::string const &request);
+  void fetchData(std::string const &request);
+  int initData(); // will eventually be taken over by Server->conf
 
 public:
   Request();
@@ -33,13 +33,14 @@ public:
   Request(Request const &src);
   Request &operator=(Request const &rhs);
 
-  int					validateRequest() const;
-  std::string			getFilePath() const;
-  void 					setRequest(std::string const &request);
-  Request const 		&getRequest() const;
-  bool					isCGI() const;
-  RequestLine const		&line() const;
-  hashmap const			&headers() const;
-  std::string const		&body() const;
+  int validateRequest() const;
+  std::string getFilePath() const;
+  std::string getAbsPath() const;
+  void setRequest(std::string const &request);
+  Request const &getRequest() const;
+  bool isCGI() const;
+  RequestLine const &line() const;
+  hashmap const &headers() const;
+  std::string const &body() const;
 };
 #endif

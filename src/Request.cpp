@@ -37,8 +37,19 @@ Request &Request::operator=(Request const &rhs) {
 // Will eventually need to take into account the host provided by config
 std::string Request::getFilePath() const {
   std::ostringstream s;
+  std::string uri = _requestLine.getRequestUri();
+  size_t pos = uri.find("\r\n");
+  uri.substr(0, pos);
   s << _requestLine.getRequestUri();
   return s.str();
+}
+
+std::string Request::getAbsPath() const {
+  std::ostringstream ss;
+  std::string host = _requestHeaders.find("host")->second;
+
+  ss << "http://" << host << _requestLine.getRequestUri();
+  return ss.str();
 }
 
 void Request::setRequest(std::string const &request) {
@@ -76,7 +87,6 @@ void Request::fetchData(std::string const &request) {
   pos = requestData.find("\r\n\r\n");
   std::string headers = requestData.substr(0, pos);
   _body = requestData.substr(pos + 4);
-
   std::istringstream header_stream(headers);
   std::string header;
   size_t index;
@@ -85,16 +95,18 @@ void Request::fetchData(std::string const &request) {
     if (index != std::string::npos) {
       std::string key = trim_copy(header.substr(0, index));
       std::string value = trim_copy(header.substr(index + 1));
+      pos = value.find("\r");
+      value = value.substr(0, pos);
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       _requestHeaders[key] = value;
     }
   }
 }
 
-bool	Request::isCGI() const {
-	if (_requestLine.getRequestUri().find("/cgi-bin/") == 0)
-		return true;
-	return false;
+bool Request::isCGI() const {
+  if (_requestLine.getRequestUri().find("/cgi-bin/") == 0)
+    return true;
+  return false;
 }
 
 int Request::validateRequest() const { return 0; }
