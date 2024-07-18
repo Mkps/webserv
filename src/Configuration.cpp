@@ -182,6 +182,12 @@ void	Configuration::show(void)
 	std::cout << "}" << std::endl;
 }
 
+size_t						Configuration::get_client_max_body_size(void) const
+{
+	this->get_value("client_max_body_size");
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -302,4 +308,3 @@ std::vector<Configuration> getAllConf(std::string file_config)
 			throw std::runtime_error("Invalide file.config, une Braquette n'a pas etais refermée.");
 	return configurations;
 }
-
