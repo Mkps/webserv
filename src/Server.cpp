@@ -234,7 +234,7 @@ int Server::_handleClientRequest(Client *client)
 		_deleteClient(client);
 		return ret;
 	}
-	client->log();
+	//client->log();
 	std::cout << "Request received from " << *client << std::endl;
 	return (ret);
 }
