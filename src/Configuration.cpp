@@ -182,9 +182,69 @@ void	Configuration::show(void)
 	std::cout << "}" << std::endl;
 }
 
+//methode qui retourne la valeur de la taille maximum du client
+//en unité de mesure M qui signifie megabyte
+// si il na pas la configuration ou erreur envoie 0
 size_t						Configuration::get_client_max_body_size(void) const
 {
-	this->get_value("client_max_body_size");
+	std::vector<std::string>	all_res = this->get_value("client_max_body_size");
+	if (all_res.empty())
+		return (0);
+	//rien ou B pour Byte
+	//K = pour kilo *10**3
+	//M = pour Mega * 10**6
+	std::string	str_value = all_res[0];
+	size_t	maxbodysize = 0;
+	size_t	puissance = 1;
+	std::string::const_iterator i = str_value.begin();
+	for (; i != str_value.end() && ((*i) > '0' && (*i) < '9'); i++)
+	{
+		maxbodysize = maxbodysize * 10 + ((*i) - '0');
+	}
+	if (i != str_value.end())
+	{
+		if (*i == 'K')
+			puissance = 10 * 10 * 10;
+		else if (*i == 'M')
+			puissance = 10 * 10 * 10 * 10 * 10 * 10;
+		else if (*i != 'B')
+			return (0);
+		i++;
+		if (i != str_value.end())
+			return (0);
+	}
+	return (maxbodysize * puissance);
+}
+
+std::vector<std::string> split(const std::string &s, char delimiter)
+{
+	std::vector<std::string> tokens;
+	std::string token;
+	std::istringstream tokenStream(s);
+
+	while (std::getline(tokenStream, token, delimiter)) {
+		tokens.push_back(token);
+	}
+	return tokens;
+}
+
+
+// verifie si une une methode GET POST ou DELETE Est allowed sinon return False
+bool						Configuration::is_a_allowed_Method(const std::string &methode) const
+{
+	std::vector<std::string>	all_res = this->get_value("allowedMethods");
+	if (all_res.empty())
+		return (false);
+	std::string	str_value = all_res[0];
+	std::vector<std::string> allMEthod = split(str_value, '|');
+	for (std::vector<std::string>::iterator i = allMEthod.begin(); i != allMEthod.end(); i++)
+	{
+		(*i).erase(0, (*i).find_first_not_of(" \t\r\n"));
+		(*i).erase((*i).find_last_not_of(" \t\r\n") + 1);
+		if (*i == methode)
+			return (true);
+	}
+	return (false);
 }
 
 
