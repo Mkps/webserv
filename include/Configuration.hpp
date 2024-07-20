@@ -38,7 +38,10 @@ public:
 	std::vector<Location>		get_locations(void) const;
 	std::vector<Location>		get_locations_by_path(std::string path) const;
 	void						show(void);
+	size_t						get_client_max_body_size(void) const;
+	bool						is_a_allowed_Method(const std::string &) const;
 };
+// Du genre pour recuperer le max_body_size si je suis dans upload ou recuperer directement un vecteur avec les allowed_methods.
 
 std::vector<Configuration> getAllConf(std::string file_config);
 

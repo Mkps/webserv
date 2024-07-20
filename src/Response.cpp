@@ -108,6 +108,8 @@ void Response::processRequest(Request const &req) {
     setHeader("Content-Type", "text/html", true);
     return ;
   }
+
+	// avoir un
   if (req.line().getMethod() == "GET") {
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST") {
