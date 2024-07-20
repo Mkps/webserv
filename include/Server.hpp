@@ -28,6 +28,7 @@ class Client;
 class Server {
 	public:
 		Server(std::string config);
+        Server(std::vector<Configuration> const &vConf);
 		~Server();
 
 		std::vector<s_pollfd>	getPollfds() const;
@@ -42,6 +43,7 @@ class Server {
 		std::vector<Socket *>	_sockets;
 		std::vector<Client *>	_clients;
 		size_t					_id;
+        std::vector<Configuration>          _config;
 		// Configuration			_config;
 
 		static size_t			_nbrOFServ;
@@ -57,7 +59,7 @@ class Server {
 
 		Socket					*_createSocket(std::string ip, int port);
 		void					_deleteSocket(Socket *socket);
-		Client					*_createClient(Socket *socket);
+		Client					*_createClient(Socket *socket, Configuration const &config);
 		void					_deleteClient(Client *client);
 };
 
