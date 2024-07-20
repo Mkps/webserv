@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "Request.hpp"
+#include "Client.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -109,4 +110,7 @@ bool Request::isCGI() const {
   return false;
 }
 
-int Request::validateRequest() const { return 0; }
+int Request::validateRequest(Client const &cli) const { 
+    if (cli.getConfig().get_client_max_body_size() > _body.size())
+        return 413;
+    return 0; }
