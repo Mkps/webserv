@@ -132,13 +132,25 @@ int CgiHandler::handleGet() {
     hashmap env;
     env = _setEnvGet(_script, _qData);
     _envv = hashmapToChrArray(env);
-    char *script_array[2];
-    script_array[1] = NULL;
-    script_array[0] = new char[_script.size() + 1];
-    script_array[0][_script.size()] = 0;
-    script_array[0] = strcpy(script_array[0], _script.c_str());
-    execve(_script.c_str(), script_array, _envv);
+    std::string cmd = _cgiBin;
+    if (cmd.empty())
+      cmd = _script;
+    char *script_array[3];
+    script_array[0] = new char[cmd.size() + 1];
+    script_array[0][cmd.size()] = 0;
+    script_array[0] = strcpy(script_array[0], cmd.c_str());
+    if (cmd != _script) {
+      script_array[1] = new char[_script.size() + 1];
+      script_array[1][_script.size()] = 0;
+      script_array[1] = strcpy(script_array[1], _script.c_str());
+    } else {
+      script_array[1] = NULL;
+    }
+    script_array[2] = NULL;
+    execve(cmd.c_str(), script_array, _envv);
     delete[] script_array[0];
+    if (cmd != _script)
+      delete[] script_array[1];
     throw std::runtime_error("502 execve error");
   } else {
     close(pipefd[1]);
@@ -164,14 +176,29 @@ void CgiHandler::_execCGIPost() {
   hashmap env;
   env = _setEnvPost(_script, _qData);
   _envv = hashmapToChrArray(env);
-  char *script_array[2];
-  script_array[1] = NULL;
-  script_array[0] = new char[_script.size() + 1];
-  script_array[0][_script.size()] = 0;
-  script_array[0] = strcpy(script_array[0], _script.c_str());
+  std::string cmd = _cgiBin;
+  if (cmd.empty())
+    cmd = _script;
+  char *script_array[3];
+  script_array[0] = new char[cmd.size() + 1];
+  script_array[0][cmd.size()] = 0;
+  script_array[0] = strcpy(script_array[0], cmd.c_str());
+  if (cmd != _script) {
+    script_array[1] = new char[_script.size() + 1];
+    script_array[1][_script.size()] = 0;
+    script_array[1] = strcpy(script_array[1], _script.c_str());
+  } else {
+    script_array[1] = NULL;
+  }
+  script_array[2] = NULL;
+  std::cout << "POST EXEC" << std::endl;
+  execve(cmd.c_str(), script_array, _envv);
   if (access(_script.c_str(), F_OK | X_OK)) {
     exit(126);
   }
+  delete[] script_array[0];
+  if (cmd != _script)
+    delete[] script_array[1];
   execve(_script.c_str(), script_array, _envv);
   delete[] script_array[0];
   throw std::runtime_error("502 execve error");
@@ -232,6 +259,7 @@ void CgiHandler::setRequestBody(std::string const &requestbody) {
 }
 
 void setScript(std::string const &script);
+void CgiHandler::setCgiBin(std::string const &cgiBin) { _cgiBin = cgiBin; }
 
 void setQueryData(std::string const &qData);
 

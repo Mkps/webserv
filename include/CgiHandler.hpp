@@ -20,6 +20,7 @@ class CgiHandler {
 private:
   hashmap _data;
   char **_envv;
+  std::string _cgiBin;
   std::string _qData;
   std::string _script;
   std::string _body;
@@ -45,6 +46,7 @@ public:
   std::string const &body() const;
   void setRequestBody(std::string const &requestbody);
   void setScript(std::string const &script);
+  void setCgiBin(std::string const &cgiBin);
   void setQueryData(std::string const &qData);
 };
 char **hashmapToChrArray(hashmap const &map);

@@ -23,6 +23,9 @@ private:
   RequestLine _requestLine;
   hashmap _requestHeaders;
   std::string _body;
+  bool _isCGI;
+  int _cgiIndex;
+  std::string _cgiPath;
   void retrieveHeaders(std::string const &request);
   void fetchData(std::string const &request);
   int initData(); // will eventually be taken over by Server->conf
@@ -37,8 +40,10 @@ public:
   int validateRequest(Client const &cli) const;
   std::string getFilePath() const;
   std::string getAbsPath() const;
+  std::string getCgiPath() const;
   void setRequest(std::string const &request);
   Request const &getRequest() const;
+  void checkCGI(Client const &client);
   bool isCGI() const;
   RequestLine const &line() const;
   hashmap const &headers() const;

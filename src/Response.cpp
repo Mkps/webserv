@@ -94,37 +94,21 @@ inline std::string getResponse(short status) {
     return "Bad Request";
 }
 
-inline bool isAllowedMethod(std::string s, std::vector<std::string> v) {
-  size_t pos = 0;
-  size_t start = 0;
-  while ((pos = v[0].find("|")) != v[0].npos) {
-    std::cout << v[0].substr(start, pos) << std::endl;
-    if (v[0].substr(start, pos) == s)
-      return true;
-    start = pos;
-  }
-  if (v[0].substr(start, pos) == s)
-    return true;
-  return false;
-}
-void Response::processRequest(Request const &req, Client const &client) {
+
+void Response::processRequest(Request &req, Client const &client) {
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus);
     return;
   }
-  client.getConfig().get_locations()[0].show();
-  std::vector<Location> loc =
-      client.getConfig().get_locations_by_path(req.getFilePath());
+  std::cout << "PROCESS REQUEST" << std::endl;
+  // Casting const away to execute checkCGI
+  req.checkCGI(client);
   _statusCode = 200;
-  std::vector<std::string> vec;
-  if (!loc.empty()) {
-    std::vector<std::string> vec = loc[0].get_value("allowedMethods");
-    if (!vec[0].empty() && !isAllowedMethod(req.line().getMethod(), vec)) {
-      _statusCode = 405;
-      setBodyError(_statusCode);
-      return;
-    }
+  if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
+    _statusCode = 405;
+    setBodyError(_statusCode);
+    return;
   }
   HttpRedirect::handleRedirect(req, *this);
   if (req.line().getMethod() == "GET") {
@@ -138,12 +122,14 @@ void Response::processRequest(Request const &req, Client const &client) {
       setHeader("Content-Type", "text/html", true);
       return;
     }
+    std::cout << "GET" << std::endl;
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
+    std::cout << "POST" << std::endl;
     httpMethodPost(req);
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
     httpMethodDelete(req);
-  } 
+  }
   if (_statusCode >= 200 && _statusCode < 300) {
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", findContentType(), true);
@@ -261,7 +247,7 @@ void Response::sendResponse(int clientSocket) {
   } else {
     // std::cout << "body is " << _body << std::endl;
     if (!_body.empty())
-        _body += "\r\n\r\n";
+      _body += "\r\n\r\n";
     res << writeHeader() << _body;
     if (getHeaderValue("Content-Type") == "text/html")
       std::cout << writeHeader() << std::endl;
@@ -317,8 +303,10 @@ void Response::findPath(Request const &req) {
 }
 
 void Response::httpMethodGet(Request const &req) {
+    std::cout << "sc is " << _statusCode << std::endl;
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
+    cgi.setCgiBin(req.getCgiPath());
     _statusCode = cgi.handleGet();
     if (_statusCode == 200)
       _body = cgi.body();
@@ -374,13 +362,11 @@ inline std::string extractFileName(const std::string &part) {
   //  std::cout << "start extract from " << part << std::endl;
   size_t pos = part.find("Content-Disposition:");
   if (pos != std::string::npos) {
-    std::cout << "found CT" << std::endl;
     size_t filenamePos = part.find("filename=", pos);
     if (filenamePos != std::string::npos) {
       size_t start = part.find('"', filenamePos) + 1;
       size_t end = part.find('"', start);
       filename = part.substr(start, end - start);
-      std::cout << "filename found " << filename << std::endl;
     }
   }
   return filename;
@@ -396,7 +382,7 @@ std::string extractContent(const std::string &part) {
 
 inline std::vector<std::string> get_multipart(const Request &req) {
   std::string requestBody = req.body();
-  if (req.headers().find("content-type") == req.headers().end()) 
+  if (req.headers().find("content-type") == req.headers().end())
     return std::vector<std::string>();
   std::string contentType = req.headers().find("content-type")->second;
   std::string boundary = extractBoundary(contentType);
@@ -405,9 +391,11 @@ inline std::vector<std::string> get_multipart(const Request &req) {
 }
 
 void Response::httpMethodPost(Request const &req) {
+  std::cout << "### POST ###" << std::endl;
   if (req.isCGI()) {
     CgiHandler cgi(_path);
     cgi.setRequestBody(req.body());
+    cgi.setCgiBin(req.getCgiPath());
     int ret = cgi.handlePost();
     if (ret == 200)
       _body = cgi.body();
@@ -416,9 +404,9 @@ void Response::httpMethodPost(Request const &req) {
     std::string fileName = "";
     std::ofstream outFile;
 
-    if (fileStatus(_path) == FILE_DIR){
-      if (*_path.end() != '/') 
-          _path += "/";
+    if (fileStatus(_path) == FILE_DIR) {
+      if (*_path.end() != '/')
+        _path += "/";
       std::vector<std::string> multipart = get_multipart(req);
       if (!multipart.empty()) {
         for (size_t i = 0; i < multipart.size(); ++i) {
@@ -447,10 +435,10 @@ void Response::httpMethodPost(Request const &req) {
     outFile.write(uploadBody.c_str(), uploadBody.size());
     std::string fileAbsPath = req.getAbsPath() + "/" + fileName;
     setHeader("Location", fileAbsPath, true);
-    if (isCreated){
-        _statusCode = 201;
+    if (isCreated) {
+      _statusCode = 201;
     } else {
-        _statusCode = 204;
+      _statusCode = 204;
     }
     return;
   }

@@ -49,7 +49,7 @@ class Response {
 
 		void				clear();
 		std::string			writeHeader();
-		void				processRequest(Request const & req, Client const &client);
+		void				processRequest(Request & req, Client const &client);
 		void				sendResponse(int clientSocket);
 		std::string			chunkResponse();
 

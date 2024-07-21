@@ -25,6 +25,9 @@ Request::Request(std::string const &request) : _requestLine(request) {
   if (_requestLine.isRequestLineValid() < 0)
     std::cerr << "invalid method or http version" << std::endl;
   fetchData(request);
+  _isCGI = false;
+  _cgiIndex = -1;
+  _cgiPath = "";
 }
 
 Request::Request(Request const &src) { *this = src; }
@@ -32,6 +35,7 @@ Request::Request(Request const &src) { *this = src; }
 Request &Request::operator=(Request const &rhs) {
   _requestLine = rhs.line();
   _requestHeaders = rhs.headers();
+  _isCGI = rhs._isCGI;
   return *this;
 }
 
@@ -70,8 +74,8 @@ hashmap const &Request::headers() const { return _requestHeaders; }
 
 inline void trim(std::string &s) {
   size_t first = s.find_first_not_of(' ');
-  size_t last = s.find_last_not_of(' ');
-  s = s.substr(first, last - first + 1);
+  size_t start = s.find_last_not_of(' ');
+  s = s.substr(first, start - first + 1);
 }
 
 // trim from both ends (copying)
@@ -104,13 +108,38 @@ void Request::fetchData(std::string const &request) {
   }
 }
 
-bool Request::isCGI() const {
-  if (_requestLine.getRequestUri().find("/cgi-bin/") == 0)
-    return true;
-  return false;
+inline std::string getExt(std::string const &s) {
+  std::string tmp;
+  size_t end = s.find_first_of('?');
+  tmp = s.substr(0, end);
+  size_t start = tmp.find_first_of('.');
+  if (start == tmp.npos || start + 1 >= s.size())
+      return "";
+  return tmp.substr(start + 1);
+}
+void Request::checkCGI(Client const &client) {
+  std::vector<Location> loc = client.getConfig().get_locations();
+  for (size_t i = 0; i < loc.size(); ++i) {
+    if (loc[i].get_path() == getExt(getFilePath())) {
+      _isCGI = true;
+      _cgiIndex = i;
+      std::string dummy(loc[i].get_value("cgi_path")[0]);
+      _cgiPath = dummy;
+      return ;
+    }
+  }
+  _isCGI = false;
 }
 
-int Request::validateRequest(Client const &cli) const { 
-    if (cli.getConfig().get_client_max_body_size() > _body.size())
-        return 413;
-    return 0; }
+std::string Request::getCgiPath() const {
+    return _cgiPath;
+}
+bool Request::isCGI() const { return _isCGI; }
+
+int Request::validateRequest(Client const &cli) const {
+  std::cout << "max body size " << cli.getConfig().get_client_max_body_size()
+            << " payload size " << _body.size() << std::endl;
+  if (_body.size() > cli.getConfig().get_client_max_body_size())
+    return 413;
+  return 0;
+}
