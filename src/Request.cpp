@@ -111,6 +111,7 @@ bool Request::isCGI() const {
 }
 
 int Request::validateRequest(Client const &cli) const { 
-    if (cli.getConfig().get_client_max_body_size() > _body.size())
+    std::cout << "max body size " << cli.getConfig().get_client_max_body_size() << " payload size " <<  _body.size() << std::endl;
+    if (_body.size() > cli.getConfig().get_client_max_body_size())
         return 413;
     return 0; }
