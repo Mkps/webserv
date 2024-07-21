@@ -31,6 +31,8 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response) {
   response._path = path;
   if (req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR)
     return;
+  if (req.isCGI())
+      return ;
   // Check for redirection here
   std::vector<std::string> tryFiles(conf.get_locations()[0].get_value("index"));
   if (fileStatus(path) == FILE_REG) {
