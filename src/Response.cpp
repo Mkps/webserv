@@ -101,6 +101,7 @@ void Response::processRequest(Request &req, Client const &client) {
     setBodyError(requestStatus);
     return;
   }
+  std::cout << "PROCESS REQUEST" << std::endl;
   // Casting const away to execute checkCGI
   req.checkCGI(client);
   _statusCode = 200;
@@ -121,8 +122,10 @@ void Response::processRequest(Request &req, Client const &client) {
       setHeader("Content-Type", "text/html", true);
       return;
     }
-    httpMethodGet(req, client);
+    std::cout << "GET" << std::endl;
+    httpMethodGet(req);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
+    std::cout << "POST" << std::endl;
     httpMethodPost(req);
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
     httpMethodDelete(req);
@@ -299,10 +302,10 @@ void Response::findPath(Request const &req) {
   }
 }
 
-void Response::httpMethodGet(Request const &req, Client const &client) {
+void Response::httpMethodGet(Request const &req) {
+    std::cout << "sc is " << _statusCode << std::endl;
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
-    (void)client;
     cgi.setCgiBin(req.getCgiPath());
     _statusCode = cgi.handleGet();
     if (_statusCode == 200)
@@ -388,9 +391,11 @@ inline std::vector<std::string> get_multipart(const Request &req) {
 }
 
 void Response::httpMethodPost(Request const &req) {
+  std::cout << "### POST ###" << std::endl;
   if (req.isCGI()) {
     CgiHandler cgi(_path);
     cgi.setRequestBody(req.body());
+    cgi.setCgiBin(req.getCgiPath());
     int ret = cgi.handlePost();
     if (ret == 200)
       _body = cgi.body();

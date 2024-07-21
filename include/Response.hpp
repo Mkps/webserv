@@ -55,7 +55,7 @@ class Response {
 
 		int                 handleCGI(int clientSocket, std::string const & script, std::string const & query);
 		void				httpMethodDelete(Request const& req);
-		void				httpMethodGet(Request const& req, Client const &client);
+		void				httpMethodGet(Request const& req);
 		void				httpMethodPost(Request const& req);
 		std::string			findContentType();
         void                findPath(Request const &req);
