@@ -117,14 +117,10 @@ void Response::processRequest(Request const &req, Client const &client) {
   std::vector<Location> loc =
       client.getConfig().get_locations_by_path(req.getFilePath());
   _statusCode = 200;
-  std::vector<std::string> vec;
-  if (!loc.empty()) {
-    std::vector<std::string> vec = loc[0].get_value("allowedMethods");
-    if (!vec[0].empty() && !isAllowedMethod(req.line().getMethod(), vec)) {
-      _statusCode = 405;
-      setBodyError(_statusCode);
-      return;
-    }
+  if (client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
+    _statusCode = 405;
+    setBodyError(_statusCode);
+    return;
   }
   HttpRedirect::handleRedirect(req, *this);
   if (req.line().getMethod() == "GET") {
@@ -143,7 +139,7 @@ void Response::processRequest(Request const &req, Client const &client) {
     httpMethodPost(req);
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
     httpMethodDelete(req);
-  } 
+  }
   if (_statusCode >= 200 && _statusCode < 300) {
     setHeader("Content-Length", sizeToStr(_body.size()), true);
     setHeader("Content-Type", findContentType(), true);
@@ -261,7 +257,7 @@ void Response::sendResponse(int clientSocket) {
   } else {
     // std::cout << "body is " << _body << std::endl;
     if (!_body.empty())
-        _body += "\r\n\r\n";
+      _body += "\r\n\r\n";
     res << writeHeader() << _body;
     if (getHeaderValue("Content-Type") == "text/html")
       std::cout << writeHeader() << std::endl;
@@ -396,7 +392,7 @@ std::string extractContent(const std::string &part) {
 
 inline std::vector<std::string> get_multipart(const Request &req) {
   std::string requestBody = req.body();
-  if (req.headers().find("content-type") == req.headers().end()) 
+  if (req.headers().find("content-type") == req.headers().end())
     return std::vector<std::string>();
   std::string contentType = req.headers().find("content-type")->second;
   std::string boundary = extractBoundary(contentType);
@@ -416,9 +412,9 @@ void Response::httpMethodPost(Request const &req) {
     std::string fileName = "";
     std::ofstream outFile;
 
-    if (fileStatus(_path) == FILE_DIR){
-      if (*_path.end() != '/') 
-          _path += "/";
+    if (fileStatus(_path) == FILE_DIR) {
+      if (*_path.end() != '/')
+        _path += "/";
       std::vector<std::string> multipart = get_multipart(req);
       if (!multipart.empty()) {
         for (size_t i = 0; i < multipart.size(); ++i) {
@@ -447,10 +443,10 @@ void Response::httpMethodPost(Request const &req) {
     outFile.write(uploadBody.c_str(), uploadBody.size());
     std::string fileAbsPath = req.getAbsPath() + "/" + fileName;
     setHeader("Location", fileAbsPath, true);
-    if (isCreated){
-        _statusCode = 201;
+    if (isCreated) {
+      _statusCode = 201;
     } else {
-        _statusCode = 204;
+      _statusCode = 204;
     }
     return;
   }
