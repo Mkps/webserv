@@ -49,13 +49,13 @@ class Response {
 
 		void				clear();
 		std::string			writeHeader();
-		void				processRequest(Request const & req, Client const &client);
+		void				processRequest(Request & req, Client const &client);
 		void				sendResponse(int clientSocket);
 		std::string			chunkResponse();
 
 		int                 handleCGI(int clientSocket, std::string const & script, std::string const & query);
 		void				httpMethodDelete(Request const& req);
-		void				httpMethodGet(Request const& req);
+		void				httpMethodGet(Request const& req, Client const &client);
 		void				httpMethodPost(Request const& req);
 		std::string			findContentType();
         void                findPath(Request const &req);

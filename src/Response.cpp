@@ -94,30 +94,17 @@ inline std::string getResponse(short status) {
     return "Bad Request";
 }
 
-inline bool isAllowedMethod(std::string s, std::vector<std::string> v) {
-  size_t pos = 0;
-  size_t start = 0;
-  while ((pos = v[0].find("|")) != v[0].npos) {
-    std::cout << v[0].substr(start, pos) << std::endl;
-    if (v[0].substr(start, pos) == s)
-      return true;
-    start = pos;
-  }
-  if (v[0].substr(start, pos) == s)
-    return true;
-  return false;
-}
-void Response::processRequest(Request const &req, Client const &client) {
+
+void Response::processRequest(Request &req, Client const &client) {
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus);
     return;
   }
-  client.getConfig().get_locations()[0].show();
-  std::vector<Location> loc =
-      client.getConfig().get_locations_by_path(req.getFilePath());
+  // Casting const away to execute checkCGI
+  req.checkCGI(client);
   _statusCode = 200;
-  if (client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
+  if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
     _statusCode = 405;
     setBodyError(_statusCode);
     return;
@@ -134,7 +121,7 @@ void Response::processRequest(Request const &req, Client const &client) {
       setHeader("Content-Type", "text/html", true);
       return;
     }
-    httpMethodGet(req);
+    httpMethodGet(req, client);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
     httpMethodPost(req);
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
@@ -312,9 +299,11 @@ void Response::findPath(Request const &req) {
   }
 }
 
-void Response::httpMethodGet(Request const &req) {
+void Response::httpMethodGet(Request const &req, Client const &client) {
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
+    (void)client;
+    cgi.setCgiBin(req.getCgiPath());
     _statusCode = cgi.handleGet();
     if (_statusCode == 200)
       _body = cgi.body();
@@ -370,13 +359,11 @@ inline std::string extractFileName(const std::string &part) {
   //  std::cout << "start extract from " << part << std::endl;
   size_t pos = part.find("Content-Disposition:");
   if (pos != std::string::npos) {
-    std::cout << "found CT" << std::endl;
     size_t filenamePos = part.find("filename=", pos);
     if (filenamePos != std::string::npos) {
       size_t start = part.find('"', filenamePos) + 1;
       size_t end = part.find('"', start);
       filename = part.substr(start, end - start);
-      std::cout << "filename found " << filename << std::endl;
     }
   }
   return filename;
