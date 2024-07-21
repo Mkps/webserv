@@ -17,6 +17,7 @@
 #include <map>
 
 typedef std::map<std::string, std::string> hashmap;
+class Client;
 class Request {
 private:
   RequestLine _requestLine;
@@ -33,7 +34,7 @@ public:
   Request(Request const &src);
   Request &operator=(Request const &rhs);
 
-  int validateRequest() const;
+  int validateRequest(Client const &cli) const;
   std::string getFilePath() const;
   std::string getAbsPath() const;
   void setRequest(std::string const &request);

@@ -108,8 +108,9 @@ inline bool isAllowedMethod(std::string s, std::vector<std::string> v) {
   return false;
 }
 void Response::processRequest(Request const &req, Client const &client) {
-  if (req.validateRequest() < 0) {
-    setBodyError(400);
+  int requestStatus = req.validateRequest(client);
+  if (requestStatus) {
+    setBodyError(requestStatus);
     return;
   }
   client.getConfig().get_locations()[0].show();
@@ -388,8 +389,7 @@ inline std::string extractFileName(const std::string &part) {
 std::string extractContent(const std::string &part) {
   size_t headerEnd = part.find("\r\n\r\n");
   if (headerEnd != std::string::npos) {
-    std::cout << "content found" << std::endl;
-    return part.substr(headerEnd + 4); // Skip past the \r\n\r\n
+    return part.substr(headerEnd + 4);
   }
   return "";
 }
