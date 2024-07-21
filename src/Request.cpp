@@ -109,12 +109,13 @@ void Request::fetchData(std::string const &request) {
 }
 
 inline std::string getExt(std::string const &s) {
-  size_t start = s.find_first_of('.');
+  std::string tmp;
   size_t end = s.find_first_of('?');
-  if (start == s.npos || start + 1 >= s.size())
+  tmp = s.substr(0, end);
+  size_t start = tmp.find_first_of('.');
+  if (start == tmp.npos || start + 1 >= s.size())
       return "";
-  std::cout << "string is " << s.substr(start + 1, end - start) << std::endl;
-  return s.substr(start + 1, end - start);
+  return tmp.substr(start + 1);
 }
 void Request::checkCGI(Client const &client) {
   std::vector<Location> loc = client.getConfig().get_locations();
