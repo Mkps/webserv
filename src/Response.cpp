@@ -94,7 +94,6 @@ inline std::string getResponse(short status) {
     return "Bad Request";
 }
 
-
 void Response::processRequest(Request &req, Client const &client) {
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
@@ -141,8 +140,11 @@ void Response::processRequest(Request &req, Client const &client) {
 void Response::setBodyError(int status) {
   std::ostringstream s;
   _statusCode = status;
-  s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
-    << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
+  s << "<!DOCTYPE html>\n<html>\n<head>\n<title>" << _statusCode << " "
+    << getResponse(_statusCode) << "</title>\n</head>\n<body>\n<center>\n<h1>"
+    << _statusCode << " " << getResponse(_statusCode) << "</h1>\n</center>\n"
+    << "<hr>\n<center>WebServ 0.1</center>\n"
+    << "</body>\n</html>";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()), true);
   setHeader("Content-Type", "text/html", true);
@@ -303,7 +305,7 @@ void Response::findPath(Request const &req) {
 }
 
 void Response::httpMethodGet(Request const &req) {
-    std::cout << "sc is " << _statusCode << std::endl;
+  std::cout << "sc is " << _statusCode << std::endl;
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
     cgi.setCgiBin(req.getCgiPath());
