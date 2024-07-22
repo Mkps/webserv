@@ -79,9 +79,9 @@ inline std::string getResponse(short status) {
     return "OK";
   } else if (status >= 300 && status < 400) {
     if (status == 301)
-        return "Moved Permanently";
+      return "Moved Permanently";
     else if (status == 302)
-        return "Found";
+      return "Found";
     return "Redirection";
   } else if (status >= 400 && status < 500) {
     if (status == 403)
@@ -125,13 +125,15 @@ void Response::processRequest(Request &req, Client const &client) {
         client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
             "on") { // if no substitution were found and the autoindex is on
       _statusCode = 200;
-      _body = HttpAutoindex::generateIndex(req, _path);
-      setHeader("Content-Length", sizeToStr(_body.size()), true);
-      setHeader("Content-Type", "text/html", true);
-    std::cout << ">>> ##" << std::endl;
-      return;
+      try {
+        _body = HttpAutoindex::generateIndex(req, _path);
+        setHeader("Content-Length", sizeToStr(_body.size()), true);
+        setHeader("Content-Type", "text/html", true);
+      } catch (HttpAutoindex::NoPathException const &e) {
+        setBodyError(404);
+      }
+      return ;
     }
-    std::cout << "GET" << std::endl;
     httpMethodGet(req);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
     std::cout << "POST" << std::endl;
@@ -153,8 +155,7 @@ void Response::setBodyError(int status) {
   s << "<!DOCTYPE html>\n<html>\n<head>\n<title>" << _statusCode << " "
     << getResponse(_statusCode) << "</title>\n</head>\n<body>\n<center>\n<h1>"
     << _statusCode << " " << getResponse(_statusCode) << "</h1>\n</center>\n"
-    << "<hr>\n<center>webserv/0.1</center>"
-    << "</body>\n</html>";
+    << "<hr>\n<center>webserv/0.1</center>" << "</body>\n</html>";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()), true);
   setHeader("Content-Type", "text/html", true);
@@ -257,7 +258,6 @@ void Response::sendResponse(int clientSocket) {
     std::string chunk = chunkResponse();
     sendStr(clientSocket, chunk);
   } else {
-    // std::cout << "body is " << _body << std::endl;
     if (!_body.empty())
       _body += "\r\n\r\n";
     res << writeHeader() << _body;

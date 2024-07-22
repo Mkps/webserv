@@ -96,8 +96,7 @@ std::string HttpAutoindex::generateIndex(Request const &req,
     ss << "<hr>";
     ss << "<pre>";
     ss << listDirectories(path, req.getAbsPath());
-    ss << "</pre>";
-    ss << "<hr>";
+    ss << "</pre><hr>";
     ss << "</body></html>";
   } else {
     throw HttpAutoindex::NoPathException();
