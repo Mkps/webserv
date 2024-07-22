@@ -16,10 +16,9 @@ HttpRedirect &HttpRedirect::operator=(HttpRedirect const &rhs) {
   return *this;
 }
 
-void HttpRedirect::handleRedirect(Request const &req, Response &response) {
-  Configuration conf("{location /{index index.html;};root ./resources/;}", 0);
-  conf.show();
+void HttpRedirect::handleRedirect(Request const &req, Response &response, Configuration const &conf) {
   std::string root = conf.get_value("root")[0];
+  std::cout << "root " << root << std::endl;
   std::string path = root + req.getFilePath();
   if (req.getFilePath() == "/funny") {
     std::cout << "Never gonna give you up" << std::endl;
@@ -34,7 +33,11 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response) {
   if (req.isCGI())
       return ;
   // Check for redirection here
-  std::vector<std::string> tryFiles(conf.get_locations()[0].get_value("index"));
+  std::vector<Location> lv = conf.get_locations_by_path(req.getFilePath());
+  std::vector<std::string> tryFiles;
+  if (!lv.empty()){
+    tryFiles = lv[0].get_value("index");
+  }
   if (fileStatus(path) == FILE_REG) {
     response._path = std::string(path);
     return;

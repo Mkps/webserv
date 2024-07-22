@@ -117,7 +117,7 @@ void Response::processRequest(Request &req, Client const &client) {
     setBodyError(_statusCode);
     return;
   }
-  HttpRedirect::handleRedirect(req, *this);
+  HttpRedirect::handleRedirect(req, *this, client.getConfig());
   if (req.line().getMethod() == "GET") {
     if (_statusCode == 403 &&
         !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
@@ -322,7 +322,7 @@ void Response::httpMethodGet(Request const &req) {
       _body = cgi.body();
   }
   if (!req.isCGI() && _statusCode == 200) {
-    if (!access(_path.c_str(), F_OK | R_OK))
+    if (fileStatus(_path) == FILE_REG && !access(_path.c_str(), F_OK | R_OK))
       setBody(_path);
     else
       _statusCode = 403;
