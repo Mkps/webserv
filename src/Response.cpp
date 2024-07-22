@@ -72,18 +72,26 @@ inline std::string getResponse(short status) {
   if (status >= 100 && status < 200) {
     return "Informational";
   } else if (status >= 200 && status < 300) {
-    if (status == 204)
+    if (status == 201)
+      return "Created";
+    else if (status == 204)
       return "No Response";
     return "OK";
   } else if (status >= 300 && status < 400) {
+    if (status == 301)
+        return "Moved Permanently";
+    else if (status == 302)
+        return "Found";
     return "Redirection";
   } else if (status >= 400 && status < 500) {
     if (status == 403)
       return "Forbidden";
     else if (status == 404)
-      return "File Not Found";
+      return "Not Found";
     else if (status == 405)
       return "Method Not Allowed";
+    else if (status == 406)
+      return "Not Acceptable";
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
@@ -91,7 +99,7 @@ inline std::string getResponse(short status) {
       return "Bad Gateway";
     return "Server Error";
   } else
-    return "Bad Request";
+    return "Error";
 }
 
 void Response::processRequest(Request &req, Client const &client) {
@@ -143,7 +151,7 @@ void Response::setBodyError(int status) {
   s << "<!DOCTYPE html>\n<html>\n<head>\n<title>" << _statusCode << " "
     << getResponse(_statusCode) << "</title>\n</head>\n<body>\n<center>\n<h1>"
     << _statusCode << " " << getResponse(_statusCode) << "</h1>\n</center>\n"
-    << "<hr>\n<center>WebServ 0.1</center>\n"
+    << "<hr>\n<center>webserv/0.1</center>"
     << "</body>\n</html>";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()), true);
