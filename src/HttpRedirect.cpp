@@ -3,6 +3,7 @@
 #include "Request.hpp"
 #include "Response.hpp"
 #include "http_utils.hpp"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 HttpRedirect::HttpRedirect() {}
@@ -16,10 +17,15 @@ HttpRedirect &HttpRedirect::operator=(HttpRedirect const &rhs) {
   return *this;
 }
 
-void HttpRedirect::handleRedirect(Request const &req, Response &response, Configuration const &conf) {
+void HttpRedirect::handleRedirect(Request const &req, Response &response,
+                                  Configuration const &conf) {
   std::string root = conf.get_value("root")[0];
-  std::cout << "root " << root << std::endl;
+  if (root.empty())
+    root = ".";
+  if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')
+    root = root.substr(0, root.size() - 1);
   std::string path = root + req.getFilePath();
+  std::cout << "path is " << path << std::endl;
   if (req.getFilePath() == "/funny") {
     std::cout << "Never gonna give you up" << std::endl;
     response._statusCode = 302;
@@ -31,11 +37,11 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response, Config
   if (req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR)
     return;
   if (req.isCGI())
-      return ;
+    return;
   // Check for redirection here
   std::vector<Location> lv = conf.get_locations_by_path(req.getFilePath());
   std::vector<std::string> tryFiles;
-  if (!lv.empty()){
+  if (!lv.empty()) {
     tryFiles = lv[0].get_value("index");
   }
   if (fileStatus(path) == FILE_REG) {
@@ -43,14 +49,13 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response, Config
     return;
   }
   if (fileStatus(path) == FILE_DIR) {
+    response._statusCode = 403;
     for (size_t i = 0; i < tryFiles.size(); ++i) {
       std::string filePath(path + tryFiles[i]);
       if (fileStatus(filePath) == FILE_REG) {
         response._statusCode = 200;
         response._path = std::string(filePath);
         return;
-      } else {
-        response._statusCode = 403;
       }
     }
   } else if (fileStatus(path) == FILE_NOT) {

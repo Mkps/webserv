@@ -119,6 +119,7 @@ void Response::processRequest(Request &req, Client const &client) {
   }
   HttpRedirect::handleRedirect(req, *this, client.getConfig());
   if (req.line().getMethod() == "GET") {
+    std::cout << ">>> #" << std::endl;
     if (_statusCode == 403 &&
         !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
         client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
@@ -127,6 +128,7 @@ void Response::processRequest(Request &req, Client const &client) {
       _body = HttpAutoindex::generateIndex(req, _path);
       setHeader("Content-Length", sizeToStr(_body.size()), true);
       setHeader("Content-Type", "text/html", true);
+    std::cout << ">>> ##" << std::endl;
       return;
     }
     std::cout << "GET" << std::endl;
