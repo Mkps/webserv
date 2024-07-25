@@ -11,55 +11,70 @@
 /* ************************************************************************** */
 
 #include "Socket.hpp"
-#include <stdexcept>
-#include <unistd.h>
-#include <strings.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <stdexcept>
+#include <strings.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
-Socket::Socket(std::string ip, short port) : _ip(ip), _port(port)
-{
-	int opt = 1;
+inline int set_socket_non_blocking(int sockfd) {
+  int flags = fcntl(sockfd, F_GETFL, 0);
+  if (flags == -1) {
+    // Handle error
+    std::cerr << "Error getting fcntl flag" << std::endl;
+    return -1;
+  }
 
-	_socketFd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_socketFd == -1)
-	{
-		throw std::runtime_error("Failed to create socket");
-	}
+  if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+    // Handle error
+    std::cerr << "Error setting non-block flag" << std::endl;
+    return -1;
+  }
 
-	if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1)
-	{
-		throw std::runtime_error("Failed to reuse socket address");
-	}
+  return 0;
+}
 
-	bzero(&_addr, sizeof(_addr));
-	_addr.sin_family = AF_INET;
-	_addr.sin_addr.s_addr = inet_addr(ip.c_str());
-	_addr.sin_port = htons(port);
+Socket::Socket(std::string ip, short port) : _ip(ip), _port(port) {
+  int opt = 1;
 
-	if (bind(_socketFd, (sockaddr *)&_addr, sizeof(_addr)) == -1)
-	{
-		throw std::runtime_error("Failed to bind socket");
-	}
+  _socketFd = socket(AF_INET, SOCK_STREAM, 0);
+  if (_socketFd == -1) {
+    throw std::runtime_error("Failed to create socket");
+  }
 
-	if (listen(_socketFd, MAX_CONNECTIONS) == -1)
-	{
-		throw std::runtime_error("Failed to listen on socket");
-	}
+  if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+                 sizeof(opt)) == -1) {
+    throw std::runtime_error("Failed to reuse socket address");
+  }
+  if (set_socket_non_blocking(_socketFd) == -1) {
+    throw std::runtime_error("Failed to make socket non blocking");
+  }
+  bzero(&_addr, sizeof(_addr));
+  _addr.sin_family = AF_INET;
+  _addr.sin_addr.s_addr = inet_addr(ip.c_str());
+  _addr.sin_port = htons(port);
 
-	std::cout << "Socket created : " << *this << std::endl;
+  if (bind(_socketFd, (sockaddr *)&_addr, sizeof(_addr)) == -1) {
+    throw std::runtime_error("Failed to bind socket");
+  }
+
+  if (listen(_socketFd, MAX_CONNECTIONS) == -1) {
+    throw std::runtime_error("Failed to listen on socket");
+  }
+
+  std::cout << "Socket created : " << *this << std::endl;
 }
 
 Socket::~Socket(void) { close(_socketFd); }
 
 int Socket::getFd() const { return _socketFd; }
 
-std::string	Socket::getIp() const { return _ip; }
+std::string Socket::getIp() const { return _ip; }
 
 short Socket::getPort() const { return _port; }
 
-std::ostream & operator<<(std::ostream & o, Socket const & r)
-{
-	o << r.getIp() << ":" << r.getPort();
-	return o;
+std::ostream &operator<<(std::ostream &o, Socket const &r) {
+  o << r.getIp() << ":" << r.getPort();
+  return o;
 }
