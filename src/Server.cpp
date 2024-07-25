@@ -124,7 +124,7 @@ Client *Server::_createClient(Socket *socket, Configuration const &conf) {
   }
 
   s_pollfd pollfd = {client->getFd(), POLLIN, 0};
-
+//  client.setConfig();
   _clients.push_back(client);
   _pollfds.push_back(pollfd);
 

@@ -37,7 +37,6 @@ inline int set_socket_non_blocking(int sockfd) {
 
 Socket::Socket(std::string ip, short port) : _ip(ip), _port(port) {
   int opt = 1;
-
   _socketFd = socket(AF_INET, SOCK_STREAM, 0);
   if (_socketFd == -1) {
     throw std::runtime_error("Failed to create socket");
