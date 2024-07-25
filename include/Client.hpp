@@ -32,6 +32,7 @@ public:
   void clearRequest(void);
   int dataFd();
   void checkCgi();
+  void setConfig(std::vector<Configuration> const &conf);
 
   int recvRequest();
   void handleResponse();

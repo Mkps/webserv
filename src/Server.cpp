@@ -124,7 +124,6 @@ Client *Server::_createClient(Socket *socket, Configuration const &conf) {
   }
 
   s_pollfd pollfd = {client->getFd(), POLLIN, 0};
-//  client.setConfig();
   _clients.push_back(client);
   _pollfds.push_back(pollfd);
 
@@ -215,6 +214,9 @@ int Server::_handleClientRequest(Client *client) {
     _deleteClient(client);
     return ret;
   }
+  client->setConfig(_config);
+  std::cout << "client after setConfig " << *client << std::endl;
+  std::cout << "client root " << client->getConfig().get_value("root")[0] << std::endl;
   // client->log();
   //std::cout << "Request received from " << *client << std::endl;
   return (ret);

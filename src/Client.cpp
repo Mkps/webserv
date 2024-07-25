@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include "CgiHandler.hpp"
 #include "Configuration.hpp"
 #include "Socket.hpp"
 #include <arpa/inet.h>
@@ -32,7 +33,7 @@ Client::~Client(void) { close(_fd); }
 
 Socket *Client::getSocket() const { return _socket; }
 
-std::string Client::getServerName() const { return _serverName;}
+std::string Client::getServerName() const { return _serverName; }
 
 std::string Client::getIp() const { return _ip; }
 
@@ -43,8 +44,8 @@ int Client::getFd() const { return _fd; }
 std::string Client::getRequest() const { return _request; }
 
 Configuration const &Client::getConfig() const { return _config; }
-void        Client::setState(int newState) { _state = newState; }
-int         Client::getState() const { return _state;}
+void Client::setState(int newState) { _state = newState; }
+int Client::getState() const { return _state; }
 
 void Client::clearRequest(void) { _request.clear(); }
 
@@ -69,8 +70,7 @@ int Client::recvRequest(void) {
     _serverName = it->second;
     size_t pos = _serverName.find(":");
     _serverName = _serverName.substr(0, pos);
-  }
-  else
+  } else
     _serverName = "";
   _state = C_REQ;
   return (CLIENT_CONNECTED);
@@ -82,33 +82,68 @@ void Client::log(void) const {
 }
 
 std::ostream &operator<<(std::ostream &o, Client const &r) {
-  o << "Client " << r.getId() << " [" << r.getState() << "] "<< " (" << r.getFd() << ") from " << r.getIp()
-    << " on socket " << *r.getSocket() << " with name " << r.getServerName();
+  o << "Client " << r.getId() << " [" << r.getState() << "] " << " ("
+    << r.getFd() << ") from " << r.getIp() << " on socket " << *r.getSocket();
+  if (!r.getServerName().empty())
+    o << " with name " << r.getServerName();
+  else
+    o << " with no specified name";
   return o;
 }
 
 void Client::checkCgi() {
   if (_state == C_CGI)
-      _res.processCgi(_req, *this);
+    _res.processCgi(_req, *this);
 }
+
 void Client::handleResponse() {
-  std::cerr << "HANDLE RESPONSE" << std::endl;
   if (_state == C_CGI) {
-      _res.processCgi(_req, *this);
-      return ;
-  } else if (_state == C_REQ){
-  _res.processRequest(_req, *this);
-  return;
+    _res.processCgi(_req, *this);
+    return;
+  } else if (_state == C_REQ) {
+    _res.processRequest(_req, *this);
+    return;
   }
   if (_state == C_RES) {
-    std::cerr << "RESPONSE READY PREPARING TO SEND" << std::endl;
     _res.sendResponse(_fd);
     _res.clear();
     setState(C_OFF);
-  } 
+  }
   return;
 }
 
-int Client::dataFd() {
-    return _res.cgi().getFd();
+void Client::setConfig(std::vector<Configuration> const &conf) {
+  std::string host;
+  hashmap::const_iterator it = _req.headers().find("host");
+  if (it == _req.headers().end())
+    host = "127.0.0.1";
+  else {
+    host = it->second;
+    size_t pos = host.find(":");
+    host = host.substr(0, pos);
+  } 
+  Configuration const *first = NULL;
+  for (size_t i = 0; i < conf.size(); ++i) {
+    if (conf[i].get_value("host")[0] == this->_socket->getIp() &&
+        strtod(conf[i].get_value("listen")[0].c_str(), NULL) ==
+            this->_socket->getPort()) {
+        if (!first) {
+            std::cout << "found first " << _socket->getIp() << " p " << _socket->getPort() << std::endl;
+            first = &conf[i];
+        }
+      std::cout << "sn " << conf[i].get_value("server_name")[0] << " host " << host << std::endl;
+      if (conf[i].get_value("server_name")[0] == host) {
+          std::cout << "set config for client serving " << host << std::endl;
+          this->_serverName = host;
+          std::cout << "conf root before " << conf[i].get_value("root")[0] << std::endl;
+          this->_config = conf[i];
+          return ;
+      }
+    }
+  }
+  if (first) {
+     this->_config = *first;
+  }
 }
+
+int Client::dataFd() { return _res.cgi().getFd(); }
