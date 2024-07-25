@@ -97,19 +97,47 @@ inline std::string getResponse(short status) {
   } else if (status >= 500 && status < 600) {
     if (status == 502)
       return "Bad Gateway";
+    if (status == 504)
+      return "Gateway Timeout";
     return "Server Error";
   } else
     return "Error";
 }
 
-void Response::processRequest(Request &req, Client const &client) {
+void Response::processCgi(Request &req, Client &client) {
+  (void)req;
+  std::cout << "processCgi" << std::endl;
+  if (_cgi.isRunning()) {
+    if (_cgi.getProcessState() >  0) {
+      _statusCode = _cgi.getStatus();
+      if (_statusCode == 200) {
+        _body = _cgi.body();
+        if (_body.find("Content-Length") == _body.npos)
+            setHeader("Content-Length", sizeToStr(_body.size()), true);
+        if (_body.find("Content-Type") == _body.npos)
+            setHeader("Content-Type", "text/plain", true);
+      } else {
+        setBodyError(_statusCode);
+      }
+      client.setState(C_RES);
+    } else {
+      if (_cgi.timeout()) {
+        std::cout << "CGI TIMEOUT" << std::endl;
+        _cgi.killCgi();
+        _statusCode = 504;
+        setBodyError(_statusCode);
+        client.setState(C_RES);
+      }
+    }
+  }
+}
+
+void Response::processRequest(Request &req, Client &client) {
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus);
     return;
   }
-  std::cout << "PROCESS REQUEST" << std::endl;
-  // Casting const away to execute checkCGI
   req.checkCGI(client);
   _statusCode = 200;
   if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
@@ -119,7 +147,6 @@ void Response::processRequest(Request &req, Client const &client) {
   }
   HttpRedirect::handleRedirect(req, *this, client.getConfig());
   if (req.line().getMethod() == "GET") {
-    std::cout << ">>> #" << std::endl;
     if (_statusCode == 403 &&
         !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
         client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
@@ -132,9 +159,14 @@ void Response::processRequest(Request &req, Client const &client) {
       } catch (HttpAutoindex::NoPathException const &e) {
         setBodyError(404);
       }
-      return ;
+      return;
     }
     httpMethodGet(req);
+    std::cout << "is cgi running " << _cgi.isRunning() << std::endl;
+    if (_cgi.isRunning())
+      client.setState(C_CGI);
+    else
+      client.setState(C_RES);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
     std::cout << "POST" << std::endl;
     httpMethodPost(req);
@@ -261,8 +293,8 @@ void Response::sendResponse(int clientSocket) {
     if (!_body.empty())
       _body += "\r\n\r\n";
     res << writeHeader() << _body;
-    if (getHeaderValue("Content-Type") == "text/html")
-      std::cout << writeHeader() << std::endl;
+    if (DEBUG)
+        std::cout << writeHeader() << _body << std::endl;
     sendStr(clientSocket, res.str());
   }
 }
@@ -318,10 +350,11 @@ void Response::httpMethodGet(Request const &req) {
   std::cout << "sc is " << _statusCode << std::endl;
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
-    cgi.setCgiBin(req.getCgiPath());
-    _statusCode = cgi.handleGet();
+    _cgi = cgi;
+    _cgi.setCgiBin(req.getCgiPath());
+    _statusCode = _cgi.handleGet();
     if (_statusCode == 200)
-      _body = cgi.body();
+      _body = _cgi.body();
   }
   if (!req.isCGI() && _statusCode == 200) {
     if (fileStatus(_path) == FILE_REG && !access(_path.c_str(), F_OK | R_OK))
@@ -454,4 +487,8 @@ void Response::httpMethodPost(Request const &req) {
     }
     return;
   }
+}
+
+CgiHandler Response::cgi(){
+    return _cgi;
 }
