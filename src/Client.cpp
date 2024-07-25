@@ -121,28 +121,30 @@ void Client::setConfig(std::vector<Configuration> const &conf) {
     host = it->second;
     size_t pos = host.find(":");
     host = host.substr(0, pos);
-  } 
+  }
   Configuration const *first = NULL;
   for (size_t i = 0; i < conf.size(); ++i) {
     if (conf[i].get_value("host")[0] == this->_socket->getIp() &&
         strtod(conf[i].get_value("listen")[0].c_str(), NULL) ==
             this->_socket->getPort()) {
-        if (!first) {
-            std::cout << "found first " << _socket->getIp() << " p " << _socket->getPort() << std::endl;
-            first = &conf[i];
-        }
-      std::cout << "sn " << conf[i].get_value("server_name")[0] << " host " << host << std::endl;
-      if (conf[i].get_value("server_name")[0] == host) {
-          std::cout << "set config for client serving " << host << std::endl;
-          this->_serverName = host;
-          std::cout << "conf root before " << conf[i].get_value("root")[0] << std::endl;
-          this->_config = conf[i];
-          return ;
+      if (!first) {
+        std::cout << "found first " << _socket->getIp() << " p "
+                  << _socket->getPort() << std::endl;
+        first = &conf[i];
+      }
+      std::vector<std::string> tmp = conf[i].get_value("server_name");
+      if (!tmp.empty() && tmp[0] == host) {
+        std::cout << "set config for client serving " << host << std::endl;
+        this->_serverName = host;
+        std::cout << "conf root before " << conf[i].get_value("root")[0]
+                  << std::endl;
+        this->_config = conf[i];
+        return;
       }
     }
   }
   if (first) {
-     this->_config = *first;
+    this->_config = *first;
   }
 }
 
