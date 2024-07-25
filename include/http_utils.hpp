@@ -3,6 +3,8 @@
 
 #include <string>
 
+#define DEBUG 1
+
 enum e_fileStatus{FILE_REG = 0, FILE_DIR, FILE_NOT, FILE_ELS};
 
 template <typename T>

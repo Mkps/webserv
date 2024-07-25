@@ -34,6 +34,7 @@ class Server {
 		std::vector<s_pollfd>	getPollfds() const;
 		std::vector<Socket *>	getSockets() const;
 		std::vector<Client *>	getClients() const;
+        bool socketExists(std::string host, int port) const;
 
 		static void				signalHandler(int signal);
 		void					run();
@@ -44,6 +45,7 @@ class Server {
 		std::vector<Client *>	_clients;
 		size_t					_id;
         std::vector<Configuration>          _config;
+        int _continue;
 		// Configuration			_config;
 
 		static size_t			_nbrOFServ;
@@ -55,6 +57,8 @@ class Server {
 		int						_handleClientsEvent(void);
 		void					_handleClientResponse(Client *client);
 		int						_handleClientRequest(Client *client);
+        int _handleTimeout(); 
+        int _handleSend(); 
 	
 
 		Socket					*_createSocket(std::string ip, int port);

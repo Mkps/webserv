@@ -72,37 +72,72 @@ inline std::string getResponse(short status) {
   if (status >= 100 && status < 200) {
     return "Informational";
   } else if (status >= 200 && status < 300) {
-    if (status == 204)
+    if (status == 201)
+      return "Created";
+    else if (status == 204)
       return "No Response";
     return "OK";
   } else if (status >= 300 && status < 400) {
+    if (status == 301)
+      return "Moved Permanently";
+    else if (status == 302)
+      return "Found";
     return "Redirection";
   } else if (status >= 400 && status < 500) {
     if (status == 403)
       return "Forbidden";
     else if (status == 404)
-      return "File Not Found";
+      return "Not Found";
     else if (status == 405)
       return "Method Not Allowed";
+    else if (status == 406)
+      return "Not Acceptable";
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
     if (status == 502)
       return "Bad Gateway";
+    if (status == 504)
+      return "Gateway Timeout";
     return "Server Error";
   } else
-    return "Bad Request";
+    return "Error";
 }
 
+void Response::processCgi(Request &req, Client &client) {
+  (void)req;
+  std::cout << "processCgi" << std::endl;
+  if (_cgi.isRunning()) {
+    if (_cgi.getProcessState() >  0) {
+      _statusCode = _cgi.getStatus();
+      if (_statusCode == 200) {
+        _body = _cgi.body();
+        if (_body.find("Content-Length") == _body.npos)
+            setHeader("Content-Length", sizeToStr(_body.size()), true);
+        if (_body.find("Content-Type") == _body.npos)
+            setHeader("Content-Type", "text/plain", true);
+      } else {
+        setBodyError(_statusCode);
+      }
+      client.setState(C_RES);
+    } else {
+      if (_cgi.timeout()) {
+        std::cout << "CGI TIMEOUT" << std::endl;
+        _cgi.killCgi();
+        _statusCode = 504;
+        setBodyError(_statusCode);
+        client.setState(C_RES);
+      }
+    }
+  }
+}
 
-void Response::processRequest(Request &req, Client const &client) {
+void Response::processRequest(Request &req, Client &client) {
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus);
     return;
   }
-  std::cout << "PROCESS REQUEST" << std::endl;
-  // Casting const away to execute checkCGI
   req.checkCGI(client);
   _statusCode = 200;
   if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
@@ -110,20 +145,28 @@ void Response::processRequest(Request &req, Client const &client) {
     setBodyError(_statusCode);
     return;
   }
-  HttpRedirect::handleRedirect(req, *this);
+  HttpRedirect::handleRedirect(req, *this, client.getConfig());
   if (req.line().getMethod() == "GET") {
     if (_statusCode == 403 &&
         !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
         client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
             "on") { // if no substitution were found and the autoindex is on
       _statusCode = 200;
-      _body = HttpAutoindex::generateIndex(req, _path);
-      setHeader("Content-Length", sizeToStr(_body.size()), true);
-      setHeader("Content-Type", "text/html", true);
+      try {
+        _body = HttpAutoindex::generateIndex(req, _path);
+        setHeader("Content-Length", sizeToStr(_body.size()), true);
+        setHeader("Content-Type", "text/html", true);
+      } catch (HttpAutoindex::NoPathException const &e) {
+        setBodyError(404);
+      }
       return;
     }
-    std::cout << "GET" << std::endl;
     httpMethodGet(req);
+    std::cout << "is cgi running " << _cgi.isRunning() << std::endl;
+    if (_cgi.isRunning())
+      client.setState(C_CGI);
+    else
+      client.setState(C_RES);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
     std::cout << "POST" << std::endl;
     httpMethodPost(req);
@@ -141,8 +184,10 @@ void Response::processRequest(Request &req, Client const &client) {
 void Response::setBodyError(int status) {
   std::ostringstream s;
   _statusCode = status;
-  s << "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<hl>" << _statusCode
-    << "</h1>\n<p>" << getResponse(_statusCode) << "</p></body>\n</html>\r\n";
+  s << "<!DOCTYPE html>\n<html>\n<head>\n<title>" << _statusCode << " "
+    << getResponse(_statusCode) << "</title>\n</head>\n<body>\n<center>\n<h1>"
+    << _statusCode << " " << getResponse(_statusCode) << "</h1>\n</center>\n"
+    << "<hr>\n<center>webserv/0.1</center>" << "</body>\n</html>";
   _body = s.str();
   setHeader("Content-Length", sizeToStr(_body.size()), true);
   setHeader("Content-Type", "text/html", true);
@@ -245,12 +290,11 @@ void Response::sendResponse(int clientSocket) {
     std::string chunk = chunkResponse();
     sendStr(clientSocket, chunk);
   } else {
-    // std::cout << "body is " << _body << std::endl;
     if (!_body.empty())
       _body += "\r\n\r\n";
     res << writeHeader() << _body;
-    if (getHeaderValue("Content-Type") == "text/html")
-      std::cout << writeHeader() << std::endl;
+    if (DEBUG)
+        std::cout << writeHeader() << _body << std::endl;
     sendStr(clientSocket, res.str());
   }
 }
@@ -303,16 +347,17 @@ void Response::findPath(Request const &req) {
 }
 
 void Response::httpMethodGet(Request const &req) {
-    std::cout << "sc is " << _statusCode << std::endl;
+  std::cout << "sc is " << _statusCode << std::endl;
   if (_statusCode == 200 && req.isCGI()) {
     CgiHandler cgi(_path);
-    cgi.setCgiBin(req.getCgiPath());
-    _statusCode = cgi.handleGet();
+    _cgi = cgi;
+    _cgi.setCgiBin(req.getCgiPath());
+    _statusCode = _cgi.handleGet();
     if (_statusCode == 200)
-      _body = cgi.body();
+      _body = _cgi.body();
   }
   if (!req.isCGI() && _statusCode == 200) {
-    if (!access(_path.c_str(), F_OK | R_OK))
+    if (fileStatus(_path) == FILE_REG && !access(_path.c_str(), F_OK | R_OK))
       setBody(_path);
     else
       _statusCode = 403;
@@ -442,4 +487,8 @@ void Response::httpMethodPost(Request const &req) {
     }
     return;
   }
+}
+
+CgiHandler Response::cgi(){
+    return _cgi;
 }

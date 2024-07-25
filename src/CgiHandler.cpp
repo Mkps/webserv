@@ -15,8 +15,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <iostream>
 #include <stdexcept>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -50,10 +52,14 @@ hashmap CgiHandler::_setEnvPost(const std::string &script,
 // Public Member Functions
 //
 // ### Constructors/Coplien
-CgiHandler::CgiHandler() { _envv = NULL; }
+CgiHandler::CgiHandler() {
+  _envv = NULL;
+  _isRunning = false;
+}
 
 CgiHandler::CgiHandler(std::string const &uri) {
   _envv = NULL;
+  _isRunning = false;
   _script = uri;
   size_t query_pos = _script.find("?");
   if (query_pos != std::string::npos) {
@@ -86,10 +92,13 @@ void CgiHandler::freeEnvv() {
     _envv = NULL;
   }
 }
-CgiHandler::CgiHandler(CgiHandler const &src) { (void)src; }
+CgiHandler::CgiHandler(CgiHandler const &src) { *this = src; }
 
 CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
-  (void)rhs;
+  _envv = NULL;
+  _isRunning = rhs._isRunning;
+  _script = rhs._script;
+  _qData = rhs._qData;
   return *this;
 }
 
@@ -97,79 +106,136 @@ void CgiHandler::_execCGIGet() {
   hashmap env;
   env = _setEnvGet(_script, _qData);
   _envv = hashmapToChrArray(env);
-  char *script_array[2];
-  script_array[1] = NULL;
-  script_array[0] = new char[_script.size() + 1];
-  script_array[0][_script.size()] = 0;
-  script_array[0] = strcpy(script_array[0], _script.c_str());
-  // execve(_script.c_str(), script_array, _envv);
-  delete[] script_array[0];
-  script_array[0] = new char[69];
-  _script.clear();
-  freeEnvv();
-  throw std::runtime_error("502 execve error");
   /* exit(127); */
+  std::string cmd = _cgiBin;
+  if (cmd.empty())
+    cmd = _script;
+  char *script_array[3];
+  script_array[0] = new char[cmd.size() + 1];
+  script_array[0][cmd.size()] = 0;
+  script_array[0] = strcpy(script_array[0], cmd.c_str());
+  if (cmd != _script) {
+    script_array[1] = new char[_script.size() + 1];
+    script_array[1][_script.size()] = 0;
+    script_array[1] = strcpy(script_array[1], _script.c_str());
+  } else {
+    script_array[1] = NULL;
+  }
+  script_array[2] = NULL;
+  execve(cmd.c_str(), script_array, _envv);
+  delete[] script_array[0];
+  if (cmd != _script)
+    delete[] script_array[1];
+  throw std::runtime_error("502 execve error");
 }
+inline int set_socket_nonblocking(int sockfd) {
+  int flags = fcntl(sockfd, F_GETFL, 0);
+  if (flags == -1) {
+    // Handle error
+    return -1;
+  }
 
+  if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+    // Handle error
+    return -1;
+  }
+
+  return 0;
+}
 int CgiHandler::handleGet() {
   if (access(_script.c_str(), F_OK | X_OK))
     return 403;
-  int pipefd[2];
-  if (pipe(pipefd) == -1) {
+  if (pipe(_pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
     return 500;
   }
-  pid_t pid = fork();
-  if (pid < 0) {
+  /*if (set_socket_nonblocking(pipefd[0]) == -1) {*/
+  /*  std::cerr << "pipe config failed" << std::endl;*/
+  /*  return 500;*/
+  /*}*/
+  /*if (set_socket_nonblocking(pipefd[1]) == -1) {*/
+  /*  std::cerr << "pipe config failed" << std::endl;*/
+  /*  return 500;*/
+  /*}*/
+  gettimeofday(&_startTime, NULL);
+  _pid = fork();
+  _isRunning = true;
+  if (_pid < 0) {
     std::cerr << "Fork failed" << std::endl;
     return 500;
   }
-  if (!pid) {
-    close(pipefd[0]);
-    dup2(pipefd[1], STDOUT_FILENO);
-    close(pipefd[1]);
-    /* _execCGIGet(); */
-    hashmap env;
-    env = _setEnvGet(_script, _qData);
-    _envv = hashmapToChrArray(env);
-    std::string cmd = _cgiBin;
-    if (cmd.empty())
-      cmd = _script;
-    char *script_array[3];
-    script_array[0] = new char[cmd.size() + 1];
-    script_array[0][cmd.size()] = 0;
-    script_array[0] = strcpy(script_array[0], cmd.c_str());
-    if (cmd != _script) {
-      script_array[1] = new char[_script.size() + 1];
-      script_array[1][_script.size()] = 0;
-      script_array[1] = strcpy(script_array[1], _script.c_str());
-    } else {
-      script_array[1] = NULL;
-    }
-    script_array[2] = NULL;
-    execve(cmd.c_str(), script_array, _envv);
-    delete[] script_array[0];
-    if (cmd != _script)
-      delete[] script_array[1];
-    throw std::runtime_error("502 execve error");
+  if (!_pid) {
+    close(_pipefd[0]);
+    dup2(_pipefd[1], STDOUT_FILENO);
+    close(_pipefd[1]);
+    _execCGIGet();
   } else {
-    close(pipefd[1]);
-    int status;
-    if (waitpid(pid, &status, 0) == -1) {
-      return 500;
-    }
-    if (WEXITSTATUS(status) > 0) {
-      return 502;
-    }
+    close(_pipefd[1]);
+    set_socket_nonblocking(_pipefd[0]);
     char buffer[4096];
     _body = "";
     size_t n;
-    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
-      _body.append(buffer, n);
+    int child_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
+    std::cout << "child status " << child_status << std::endl;
+    if (child_status == -1) {
+      _isRunning = false;
+      return 500;
+    } else if (child_status == 0) {
+      _isRunning = true;
+    } else {
+      while ((n = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
+        /*std::cout << "reading " << buffer << std::endl;*/
+        _body.append(buffer, n);
+      }
+      close(_pipefd[0]);
     }
-    close(pipefd[0]);
   }
   return 200;
+}
+
+int CgiHandler::getProcessState() {
+  int process_status;
+  process_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
+  if (process_status)
+    _isRunning = false;
+  if (process_status > 0) {
+    char buffer[1024];
+    _body = "";
+    int bytesRead;
+    while ((bytesRead = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
+      _body.append(buffer, bytesRead);
+    }
+    close(_pipefd[0]);
+  }
+  return process_status;
+}
+
+int CgiHandler::getStatus() {
+  if (WIFEXITED(_status)) {
+    if (WEXITSTATUS(_status))
+      return 502;
+    else if (!WEXITSTATUS(_status))
+      return 200;
+  }
+  return 444;
+}
+bool CgiHandler::isRunning() { return _isRunning; }
+
+int CgiHandler::timeout() {
+  timeval_t currentTime;
+  gettimeofday(&currentTime, NULL);
+  double elapsedTime = (currentTime.tv_sec - _startTime.tv_sec) +
+                       (currentTime.tv_usec - _startTime.tv_usec) / 1000000.0;
+  std::cout << "elapsed time " << elapsedTime << std::endl;
+  if (elapsedTime > CGI_TIMEOUT)
+    return 1;
+  return 0;
+}
+
+void CgiHandler::killCgi() {
+  kill(_pid, SIGKILL);
+  close (_pipefd[0]);
+  std::cerr << "KILLING CGI" << std::endl;
 }
 
 void CgiHandler::_execCGIPost() {
@@ -262,6 +328,9 @@ void setScript(std::string const &script);
 void CgiHandler::setCgiBin(std::string const &cgiBin) { _cgiBin = cgiBin; }
 
 void setQueryData(std::string const &qData);
+int CgiHandler::getFd(){
+    return _pipefd[0];
+}
 
 // Helper function
 inline char **hashmapToChrArray(hashmap const &map) {
