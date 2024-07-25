@@ -249,6 +249,43 @@ bool						Configuration::is_a_allowed_Method(const std::string &methode) const
 }
 
 
+// retourne le chemin d'upload si vide ou rie alors retourne "./"
+std::string	Configuration::get_path_upload(void) const
+{
+	std::vector<std::string>	all_res = this->get_value("uploadpath");
+	if (all_res.empty() || all_res[0].empty())
+		return ("./");
+	return (all_res[0]);
+}
+
+// retourne la page derreur en fonction du code et retourne une string vide si il na pas etais parametre
+std::string	Configuration::get_error_page(size_t error_code) const
+{
+	std::vector<std::string>	all_res = this->get_value("error_page");
+	if (all_res.empty())
+		return ("");
+	std::ostringstream tmp;
+	tmp << error_code;
+	std::string error_code_str = tmp.str();
+	for (std::vector<std::string>::const_iterator it = all_res.begin(); it != all_res.end(); it++)
+	{
+		std::string code = (*it).substr(0, 3);
+		std::string res = (*it).substr(3);
+		res.erase(0, res.find_first_not_of(" \t\r\n"));
+		res.erase(res.find_last_not_of(" \t\r\n") + 1);
+		if (code == error_code_str)
+			return (res);
+	}
+	return ("");
+}
+
+// verifie si il sagit dune methode legit
+bool						Configuration::is_a_legit_Method(const std::string &method_name) const
+{
+	return (method_name == "POST" || method_name == "GET" || method_name == "DELETE");
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 
 
