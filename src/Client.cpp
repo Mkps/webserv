@@ -99,14 +99,17 @@ void Client::checkCgi() {
 void Client::handleResponse() {
   if (_state == C_CGI) {
     _res.processCgi(_req, *this);
+    std::cout << "HR CGI" << std::endl;
     return;
   } else if (_state == C_REQ) {
     _res.processRequest(_req, *this);
+    std::cout << "HR REQ" << std::endl;
     return;
   }
   if (_state == C_RES) {
     _res.sendResponse(_fd);
     _res.clear();
+    std::cout << "HR RES" << std::endl;
     setState(C_OFF);
   }
   return;

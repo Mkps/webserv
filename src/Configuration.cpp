@@ -198,7 +198,7 @@ size_t						Configuration::get_client_max_body_size(void) const
 	size_t	maxbodysize = 0;
 	size_t	puissance = 1;
 	std::string::const_iterator i = str_value.begin();
-	for (; i != str_value.end() && ((*i) > '0' && (*i) < '9'); i++)
+	for (; i != str_value.end() && ((*i) >= '0' && (*i) <= '9'); i++)
 	{
 		maxbodysize = maxbodysize * 10 + ((*i) - '0');
 	}

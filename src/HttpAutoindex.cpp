@@ -90,6 +90,9 @@ std::string HttpAutoindex::generateIndex(Request const &req,
                                          std::string const &path) {
   std::ostringstream ss;
 
+  std::cout << "path ####" << path /*<< " rbegin " << *path.rbegin()*/ << std::endl;
+  if (*path.rbegin() != '/')
+      throw HttpAutoindex::FolderRedirect();
   if (!path.empty()) {
     ss << "<DOCTYPE !html><html><body><h1>Index of " << req.getFilePath()
        << "</h1>";
@@ -104,6 +107,12 @@ std::string HttpAutoindex::generateIndex(Request const &req,
   return ss.str();
 }
 
+std::string HttpAutoindex::rewriteLocation(std::string const &path){
+    return path + "/";
+}
 const char *HttpAutoindex::NoPathException::what() const throw() {
   return "Provided path could not be Autoindexed";
+}
+const char *HttpAutoindex::FolderRedirect::what() const throw() {
+  return "Handing proper path to browser";
 }

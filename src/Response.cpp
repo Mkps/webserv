@@ -133,9 +133,12 @@ void Response::processCgi(Request &req, Client &client) {
 }
 
 void Response::processRequest(Request &req, Client &client) {
+  Configuration conf(client.getConfig());
+  conf.show();
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus);
+    client.setState(C_RES);
     return;
   }
   req.checkCGI(client);
@@ -143,22 +146,31 @@ void Response::processRequest(Request &req, Client &client) {
   if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
     _statusCode = 405;
     setBodyError(_statusCode);
+    client.setState(C_RES);
     return;
   }
   HttpRedirect::handleRedirect(req, *this, client.getConfig());
   if (req.line().getMethod() == "GET") {
     if (_statusCode == 403 &&
-        !client.getConfig().get_locations()[0].get_value("autoindex").empty() &&
-        client.getConfig().get_locations()[0].get_value("autoindex")[0] ==
+        !client.getConfig().get_locations_by_path("/")[0].get_value("autoindex").empty() &&
+        client.getConfig().get_locations_by_path("/")[0].get_value("autoindex")[0] ==
             "on") { // if no substitution were found and the autoindex is on
       _statusCode = 200;
       try {
         _body = HttpAutoindex::generateIndex(req, _path);
         setHeader("Content-Length", sizeToStr(_body.size()), true);
         setHeader("Content-Type", "text/html", true);
+      } catch (HttpAutoindex::FolderRedirect const &e) {
+        _statusCode = 301;
+        _body = "";
+        _responseHeaders.clear();
+        //setHeader("Content-Length", sizeToStr(_body.size()), true);
+        setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()), true);
+            
       } catch (HttpAutoindex::NoPathException const &e) {
         setBodyError(404);
-      }
+      } 
+      client.setState(C_RES);
       return;
     }
     httpMethodGet(req);
@@ -170,6 +182,10 @@ void Response::processRequest(Request &req, Client &client) {
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
     std::cout << "POST" << std::endl;
     httpMethodPost(req);
+    if (_cgi.isRunning())
+      client.setState(C_CGI);
+    else
+      client.setState(C_RES);
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
     httpMethodDelete(req);
   }
@@ -238,6 +254,10 @@ std::string Response::findContentType() {
     return "image/jpeg";
   else if (type == "png")
     return "image/png";
+  else if (type == "gif")
+    return "image/gif";
+  else if (type == "webp")
+      return "image/webp";
   else if (type == "bmp")
     return "image/bmp";
   return "text/plain";
@@ -277,7 +297,7 @@ void Response::sendResponse(int clientSocket) {
   std::ostringstream res;
   _offset = 0;
   _bytes_sent = 0;
-  if (_body.size() > 1024) {
+  if (_body.size() > 1024 || _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
     setHeader("Transfer-Encoding", "chunked", true);
     setHeader("Connection", "keep-alive", true);
     res << writeHeader();
@@ -285,7 +305,8 @@ void Response::sendResponse(int clientSocket) {
     res.clear();
     while (_offset < _body.size()) {
       std::string chunk = chunkResponse();
-      _bytes_sent += sendChunk(clientSocket, chunk);
+      int tmp = sendChunk(clientSocket, chunk);
+      _bytes_sent += tmp;
     }
     std::string chunk = chunkResponse();
     sendStr(clientSocket, chunk);
@@ -439,9 +460,10 @@ void Response::httpMethodPost(Request const &req) {
   std::cout << "### POST ###" << std::endl;
   if (req.isCGI()) {
     CgiHandler cgi(_path);
-    cgi.setRequestBody(req.body());
-    cgi.setCgiBin(req.getCgiPath());
-    int ret = cgi.handlePost();
+    _cgi = cgi;
+    _cgi.setRequestBody(req.body());
+    _cgi.setCgiBin(req.getCgiPath());
+    int ret = _cgi.handlePost();
     if (ret == 200)
       _body = cgi.body();
   } else if (_statusCode == 200) {

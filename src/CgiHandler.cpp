@@ -102,6 +102,21 @@ CgiHandler &CgiHandler::operator=(CgiHandler const &rhs) {
   return *this;
 }
 
+inline int set_socket_nonblocking(int sockfd) {
+  int flags = fcntl(sockfd, F_GETFL, 0);
+  if (flags == -1) {
+    // Handle error
+    return -1;
+  }
+
+  if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+    // Handle error
+    return -1;
+  }
+
+  return 0;
+}
+
 void CgiHandler::_execCGIGet() {
   hashmap env;
   env = _setEnvGet(_script, _qData);
@@ -128,20 +143,6 @@ void CgiHandler::_execCGIGet() {
     delete[] script_array[1];
   throw std::runtime_error("502 execve error");
 }
-inline int set_socket_nonblocking(int sockfd) {
-  int flags = fcntl(sockfd, F_GETFL, 0);
-  if (flags == -1) {
-    // Handle error
-    return -1;
-  }
-
-  if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
-    // Handle error
-    return -1;
-  }
-
-  return 0;
-}
 int CgiHandler::handleGet() {
   if (access(_script.c_str(), F_OK | X_OK))
     return 403;
@@ -149,14 +150,6 @@ int CgiHandler::handleGet() {
     std::cerr << "pipe failed" << std::endl;
     return 500;
   }
-  /*if (set_socket_nonblocking(pipefd[0]) == -1) {*/
-  /*  std::cerr << "pipe config failed" << std::endl;*/
-  /*  return 500;*/
-  /*}*/
-  /*if (set_socket_nonblocking(pipefd[1]) == -1) {*/
-  /*  std::cerr << "pipe config failed" << std::endl;*/
-  /*  return 500;*/
-  /*}*/
   gettimeofday(&_startTime, NULL);
   _pid = fork();
   _isRunning = true;
@@ -271,9 +264,8 @@ void CgiHandler::_execCGIPost() {
 }
 int CgiHandler::handlePost() {
   int stdinPipe[2];
-  int stdoutPipe[2];
 
-  if (pipe(stdinPipe) || pipe(stdoutPipe)) {
+  if (pipe(stdinPipe) || pipe(_pipefd)) {
     std::cerr << "Pipe failed" << std::endl;
     return 500;
   }
@@ -288,31 +280,34 @@ int CgiHandler::handlePost() {
     dup2(stdinPipe[0], STDIN_FILENO);
     close(stdinPipe[0]);
 
-    close(stdoutPipe[0]);
-    dup2(stdoutPipe[1], STDOUT_FILENO);
-    close(stdoutPipe[1]);
+    close(_pipefd[0]);
+    dup2(_pipefd[1], STDOUT_FILENO);
+    close(_pipefd[1]);
 
     _execCGIPost();
   } else {
     close(stdinPipe[0]);
     write(stdinPipe[1], _requestBody.c_str(), _requestBody.size());
     close(stdinPipe[1]);
-    close(stdoutPipe[1]);
-
-    std::string result;
-    char buffer[1024];
+    close(_pipefd[1]);
+    set_socket_nonblocking(_pipefd[0]);
+    char buffer[4096];
     _body = "";
-    int bytesRead;
-    while ((bytesRead = read(stdoutPipe[0], buffer, sizeof(buffer))) > 0) {
-      _body.append(buffer, bytesRead);
-    }
-    close(stdoutPipe[0]);
-
-    int status;
-    if (waitpid(pid, &status, 0) == -1)
+    size_t n;
+    int child_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
+    std::cout << "child status " << child_status << std::endl;
+    if (child_status == -1) {
+      _isRunning = false;
       return 500;
-    if (WIFEXITED(status) && WEXITSTATUS(status))
-      return 502;
+    } else if (child_status == 0) {
+      _isRunning = true;
+    } else {
+      while ((n = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
+        /*std::cout << "reading " << buffer << std::endl;*/
+        _body.append(buffer, n);
+      }
+      close(_pipefd[0]);
+    }
   }
   return 200;
 }
