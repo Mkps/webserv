@@ -32,6 +32,7 @@ public:
   std::string full() const ; //returns the full cookieheader value as a string
   void import(std::string const &data);
   strPair find(std::string const &key) const;
+  void  insert(std::string const &key, std::string const &value);
   bool exist(std::string const &key) const;
   void clear();
 };

@@ -48,5 +48,6 @@ public:
   RequestLine const &line() const;
   hashmap const &headers() const;
   std::string const &body() const;
+  std::string findValue(std::string const &value) const;
 };
 #endif

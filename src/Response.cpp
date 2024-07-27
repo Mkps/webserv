@@ -142,6 +142,7 @@ void Response::processRequest(Request &req, Client &client) {
     return;
   }
   req.checkCGI(client);
+  setHeader("Set-Cookie", client.cookie().full(), true);
   _statusCode = 200;
   if (!client.getConfig().is_a_allowed_Method(req.line().getMethod())) {
     _statusCode = 405;
@@ -174,13 +175,11 @@ void Response::processRequest(Request &req, Client &client) {
       return;
     }
     httpMethodGet(req);
-    std::cout << "is cgi running " << _cgi.isRunning() << std::endl;
     if (_cgi.isRunning())
       client.setState(C_CGI);
     else
       client.setState(C_RES);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
-    std::cout << "POST" << std::endl;
     httpMethodPost(req);
     if (_cgi.isRunning())
       client.setState(C_CGI);
@@ -335,36 +334,6 @@ inline std::string cutQuery(std::string const &path) {
     return path.substr(0, query_pos);
   } else
     return path;
-}
-void Response::findPath(Request const &req) {
-  std::string myStr[] = {"index", "index.html"};
-  std::string root = "./resources";
-  std::string path = root + req.getFilePath();
-
-  _path = path;
-  if (req.isCGI())
-    return;
-  // Check for redirection here
-  std::vector<std::string> tryFiles;
-  tryFiles.assign(myStr, myStr + 2);
-  if (fileStatus(path) == FILE_REG) {
-    _path = std::string(path);
-    return;
-  }
-  if (fileStatus(path) == FILE_DIR) {
-    for (std::vector<std::string>::const_iterator it = tryFiles.begin();
-         it != tryFiles.end(); ++it) {
-      std::string filePath(path + *it);
-      if (fileStatus(filePath) == FILE_REG) {
-        _path = std::string(filePath);
-        return;
-      } else if (fileStatus(filePath) != FILE_NOT) {
-        _statusCode = 403;
-      }
-    }
-  } else if (fileStatus(path) == FILE_NOT) {
-    _statusCode = 404;
-  }
 }
 
 void Response::httpMethodGet(Request const &req) {

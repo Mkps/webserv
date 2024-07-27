@@ -72,6 +72,13 @@ std::string const &Request::body() const { return _body; }
 
 hashmap const &Request::headers() const { return _requestHeaders; }
 
+std::string Request::findValue(std::string const &value) const {
+    hashmap::const_iterator it = _requestHeaders.find(value);
+    if (it == _requestHeaders.end())
+        return "";
+    return it->second;
+
+}
 inline void trim(std::string &s) {
   size_t first = s.find_first_not_of(' ');
   size_t start = s.find_last_not_of(' ');

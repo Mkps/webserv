@@ -11,8 +11,6 @@
 /* ************************************************************************** */
 
 #include "Cookie.hpp"
-#include <iostream>
-
 
 Cookie::Cookie(){
 }
@@ -36,7 +34,7 @@ Cookie &Cookie::operator=(Cookie const &rhs){
 bool Cookie::empty() const {
     return _data.empty();
 }
-
+#include <iostream>
 //returns the full cookieheader value as a string
 std::string Cookie::full() const {
     std::string tmp;
@@ -45,6 +43,10 @@ std::string Cookie::full() const {
     for (; it != _data.end(); ++it) {
         tmp += it->first + "=" + it->second + "; ";
     }
+    size_t pos = tmp.find_last_of(";");
+    if (pos != tmp.npos)
+        tmp = tmp.substr(0, pos);
+    std::cout << "Cookies are " << tmp << std::endl;
     return tmp;
 }
 
@@ -72,6 +74,10 @@ void Cookie::import(std::string const &data){
     }
 }
 
+void Cookie::insert(std::string const &key, std::string const &value) {
+    if (!key.empty() && !value.empty())
+        _data[key] = value;
+}
 strPair Cookie::find(std::string const &key) const{
     hashmap::const_iterator it = _data.find(key);
     return *it;
