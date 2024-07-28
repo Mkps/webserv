@@ -83,3 +83,22 @@ std::string get_current_date() {
 
   return std::string(buf);
 }
+
+void logStep(std::string const &s, int n) {
+    std::cerr << s << " ";
+    for (int i = 0; i < n; ++i) {
+        std::cerr << "#";
+    }
+    std::cerr << std::endl;
+};
+
+void logItem(std::string const &s, std::string const &item) {
+    std::cerr << s << " " << item << std::endl;
+};
+void logItem(std::string const &s, int const &item) {
+    std::cerr << s << " " << item << std::endl;
+};
+int logError(std::string const &s, int const &status) {
+    std::cerr << "Log: " << s << std::endl;
+    return status;
+}
