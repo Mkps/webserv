@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/07/10 16:47:14 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/07/28 18:14:27 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,14 +16,40 @@
 #include <iostream>
 #include <stdexcept>
 
-int main(int ac, char **av) {
+// Function to check if a path is a directory
+bool isDirectory(const std::string& path) {
+  struct stat info;
+  if (stat(path.c_str(), &info) != 0) {
+    return false;
+  }
+  return (info.st_mode & S_IFDIR) != 0;
+}
+
+// Function to check if a path is a file
+bool isFile(const std::string& path) {
+  struct stat info;
+  if (stat(path.c_str(), &info) != 0) {
+    return false;
+  }
+  return (info.st_mode & S_IFREG) != 0;
+}
+int main(int ac, char **av)
+{
   const std::string defaultfile = "configurations/minimal.config";
   try {
     std::string fileConfig = defaultfile;
-    if (ac > 2)
+    if (ac > 2 || ac < 2)
       throw std::invalid_argument("Incorrect argument count.");
-    else if (ac == 2)
-      fileConfig = av[1];
+    else
+    {
+      if (isDirectory(av[1]))
+      {
+        if (static_cast<std::string>(av[1]).find("configurations/") == std::string::npos)
+          throw std::invalid_argument("Incorrect directory.");
+      }
+      else
+        fileConfig = av[1];
+    }
     std::vector<Configuration> ConfigurationForAllServ = getAllConf(fileConfig);
     for (std::vector<Configuration>::iterator it =
              ConfigurationForAllServ.begin();

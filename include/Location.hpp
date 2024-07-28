@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 15:45:38 by yzaoui            #+#    #+#             */
-/*   Updated: 2024/07/13 15:41:38 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/28 18:08:15 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include <string>
 #include <iterator>
 #include <algorithm>
+#include <sys/stat.h>
 
 #define NOCOLOR "\033[0m"
 #define RED "\033[31m"
