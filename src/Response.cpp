@@ -13,8 +13,10 @@
 #include "Response.hpp"
 #include "CgiHandler.hpp"
 #include "Client.hpp"
+#include "Configuration.hpp"
 #include "Cookie.hpp"
 #include "HttpAutoindex.hpp"
+#include "HttpMethod.hpp"
 #include "HttpRedirect.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
@@ -141,9 +143,22 @@ void Response::processCgi(Request &req, Client &client) {
   }
 }
 
+bool Response::isAutoindex(Request const &req, Configuration const &conf) {
+    if (_statusCode != 403)
+        return false;
+    std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());
+    if (l.empty())
+        return false;
+    if (l[0].get_value("autoindex").empty())
+        return false;
+    std::string autoindex = l[0].get_value("autoindex")[0];
+    if (autoindex != "on")
+        return false;
+    return true;
+}
+
 void Response::processRequest(Request &req, Client &client) {
   Configuration conf(client.getConfig());
-  conf.show();
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus, errPage(client, requestStatus));
@@ -153,22 +168,17 @@ void Response::processRequest(Request &req, Client &client) {
   req.checkCGI(client);
   setHeader("Set-Cookie", client.cookie().full(), true);
   _statusCode = 200;
-  if (!client.getConfig().is_a_allowed_Method(req.line().getMethod(), req.getFilePath())) {
+  if (!client.getConfig().is_a_allowed_Method(req.line().getMethod(),
+                                              req.getFilePath())) {
     _statusCode = 405;
     logItem("is allowed", req.getFilePath());
     setBodyError(_statusCode, errPage(client, _statusCode));
     client.setState(C_RES);
     return;
   }
-  HttpRedirect::handleRedirect(req, *this, client.getConfig());
+  HttpRedirect::handleRedirect(req, *this, conf);
   if (req.line().getMethod() == "GET") {
-    if (_statusCode == 403 &&
-        !client.getConfig()
-             .get_locations_by_path("/")[0]
-             .get_value("autoindex")
-             .empty() &&
-        client.getConfig().get_locations_by_path("/")[0].get_value(
-            "autoindex")[0] == "on") {
+    if (isAutoindex(req, conf)) {
       _statusCode = 200;
       try {
         _body = HttpAutoindex::generateIndex(req, _path);
@@ -187,19 +197,11 @@ void Response::processRequest(Request &req, Client &client) {
       client.setState(C_RES);
       return;
     }
-    httpMethodGet(req);
-    if (_cgi.isRunning())
-      client.setState(C_CGI);
-    else
-      client.setState(C_RES);
+    HttpMethod::get(req, *this);
   } else if (req.line().getMethod() == "POST" && _statusCode < 400) {
-    httpMethodPost(req, client.getConfig().get_path_upload());
-    if (_cgi.isRunning())
-      client.setState(C_CGI);
-    else
-      client.setState(C_RES);
+    HttpMethod::post(req, *this, conf.get_path_upload());
   } else if (req.line().getMethod() == "DELETE" && _statusCode < 400) {
-    httpMethodDelete(req);
+    HttpMethod::del(req, *this);
   }
   if (_statusCode >= 200 && _statusCode < 300) {
     setHeader("Content-Length", sizeToStr(_body.size()), true);
@@ -207,6 +209,10 @@ void Response::processRequest(Request &req, Client &client) {
   } else {
     setBodyError(_statusCode, errPage(client, _statusCode));
   }
+  if (_cgi.isRunning())
+    client.setState(C_CGI);
+  else
+    client.setState(C_RES);
 }
 
 void Response::setBodyError(int status, std::string error_page) {
@@ -228,6 +234,11 @@ void Response::setBodyError(int status, std::string error_page) {
 void Response::setBody(std::string const &filename) {
   std::ifstream file(filename.c_str(),
                      std::ios::in | std::ios::binary | std::ios::ate);
+  if (!file.good()) {
+    _statusCode = 403;
+    _body = "";
+    return;
+  }
   std::ifstream::pos_type file_size = file.tellg();
   file.seekg(0, std::ios::beg);
   std::string file_buffer;
@@ -325,170 +336,6 @@ void Response::sendResponse(int clientSocket) {
     if (DEBUG)
       std::cout << writeHeader() << _body << std::endl;
     sendStr(clientSocket, res.str());
-  }
-}
-
-void Response::httpMethodDelete(Request const &req) {
-  (void)req;
-  if (remove(_path.c_str()) == EXIT_SUCCESS)
-    _statusCode = 204;
-  else
-    _statusCode = 403;
-}
-
-inline std::string cutQuery(std::string const &path) {
-
-  size_t query_pos = path.find("?");
-  if (query_pos != std::string::npos) {
-    return path.substr(0, query_pos);
-  } else
-    return path;
-}
-
-void Response::httpMethodGet(Request const &req) {
-  if (_statusCode == 200 && req.isCGI()) {
-    CgiHandler cgi(_path);
-    _cgi = cgi;
-    _cgi.setCgiBin(req.getCgiPath());
-    _statusCode = _cgi.handleGet();
-    if (_statusCode == 200)
-      _body = _cgi.body();
-  }
-  if (!req.isCGI() && _statusCode == 200) {
-    if (fileStatus(_path) == FILE_REG && !access(_path.c_str(), F_OK | R_OK))
-      setBody(_path);
-    else
-      _statusCode = 403;
-  }
-}
-
-inline std::string generate_filename() {
-  std::ostringstream oss;
-  time_t t = time(NULL);
-  oss << "resource_" << t;
-  return oss.str();
-}
-
-inline std::string extractBoundary(const std::string &contentType) {
-  std::string boundaryPrefix = "boundary=";
-  size_t boundaryPos = contentType.find(boundaryPrefix);
-  if (boundaryPos != std::string::npos) {
-    return "--" + contentType.substr(boundaryPos + boundaryPrefix.size());
-  }
-  return "";
-}
-
-inline std::vector<std::string> splitParts(const std::string &body,
-                                           const std::string &boundary) {
-  std::vector<std::string> parts;
-  size_t pos = 0;
-  size_t end;
-  if (boundary.empty()) {
-    parts.push_back(body);
-    return parts;
-  }
-  while ((end = body.find(boundary, pos)) != std::string::npos) {
-    parts.push_back(body.substr(pos, end - pos));
-    pos = end + boundary.size();
-  }
-  if (pos < body.size()) {
-    parts.push_back(body.substr(pos));
-  }
-  return parts;
-}
-
-inline std::string extractFileName(const std::string &part) {
-  std::string filename;
-  std::istringstream partStream(part);
-  std::string line;
-  size_t pos = part.find("Content-Disposition:");
-  if (pos != std::string::npos) {
-    size_t filenamePos = part.find("filename=", pos);
-    if (filenamePos != std::string::npos) {
-      size_t start = part.find('"', filenamePos) + 1;
-      size_t end = part.find('"', start);
-      filename = part.substr(start, end - start);
-    }
-  }
-  return filename;
-}
-
-std::string extractContent(const std::string &part) {
-  size_t headerEnd = part.find("\r\n\r\n");
-  if (headerEnd != std::string::npos) {
-    return part.substr(headerEnd + 4);
-  }
-  return "";
-}
-
-inline std::vector<std::string> get_multipart(const Request &req) {
-  std::string requestBody = req.body();
-  std::string contentType = req.findValue("content-type");
-  if (contentType.find("multipart") == contentType.npos)
-    return std::vector<std::string>();
-  std::string boundary = extractBoundary(contentType);
-  std::vector<std::string> parts = splitParts(requestBody, boundary);
-  return parts;
-}
-
-void Response::httpMethodPost(Request const &req, std::string const &upload) {
-  if (req.isCGI()) {
-    CgiHandler cgi(_path);
-    _cgi = cgi;
-    _cgi.setRequestBody(req.body());
-    _cgi.setCgiBin(req.getCgiPath());
-    int ret = _cgi.handlePost();
-    if (ret == 200)
-      _body = cgi.body();
-  } else if (_statusCode == 200) {
-    std::string uploadBody = "";
-    std::string fileName = "";
-    std::ofstream outFile;
-    std::string upload_path;
-    if (!upload.empty())
-      upload_path = upload;
-    else
-      upload_path = _path;
-    if (fileStatus(upload_path) == FILE_DIR) {
-      if (*upload_path.rbegin() != '/')
-        upload_path += "/";
-      std::vector<std::string> multipart = get_multipart(req);
-      if (!multipart.empty()) {
-        for (size_t i = 0; i < multipart.size(); ++i) {
-          if (fileName.empty()) {
-            fileName = extractFileName(multipart[i]);
-          }
-          if (uploadBody.empty())
-            uploadBody = extractContent(multipart[i]);
-        }
-      } else {
-        upload_path += generate_filename();
-        uploadBody = req.body();
-      }
-    }
-    if (!fileName.empty())
-      upload_path += fileName;
-
-    bool isCreated = false;
-    if (access(upload_path.c_str(), F_OK | W_OK)) {
-      isCreated = true;
-    }
-    outFile.open(upload_path.c_str(),
-                 std::ios::out | std::ios::binary | std::ios::trunc);
-    if (!outFile.good()) {
-      _statusCode = 403;
-      return;
-    }
-    logItem("uploadbody is", uploadBody);
-    outFile.write(uploadBody.c_str(), uploadBody.size());
-    std::string fileAbsPath = req.getAbsPath() + "/" + fileName;
-    setHeader("Location", fileAbsPath, true);
-    if (isCreated) {
-      _statusCode = 201;
-    } else {
-      _statusCode = 204;
-    }
-    return;
   }
 }
 
