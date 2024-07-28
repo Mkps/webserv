@@ -43,6 +43,7 @@ public:
 	bool						is_a_allowed_Method(const std::string &, const std::string &) const;
 	std::string					get_path_upload(void) const;
 	std::string					get_error_page(size_t error_code) const;
+    std::string                 get_redirect(std::string const &) const;
 };
 // Du genre pour recuperer le max_body_size si je suis dans upload ou recuperer directement un vecteur avec les allowed_methods.
 
