@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Age-Restricted Content</title>
+</head>
+<body>
+    <h1>Age-Restricted Content</h1>
+    <div id="content" style="display: none;">
+        <!-- Your age-restricted content goes here -->
+        <p>This is the age-restricted content.</p>
+    </div>
+
+    <script>
+    function getCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    window.onload = function() {
+        var ageVerified = getCookie('age_verified');
+        if (ageVerified) {
+            document.getElementById('content').style.display = 'block';
+        } else {
+            // If not verified, redirect to the age check page
+            window.location.href = "/age_check.html";
+        }
+    }
+    </script>
+</body>
+</html>

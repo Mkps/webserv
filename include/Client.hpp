@@ -4,6 +4,7 @@
 #include "Configuration.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Cookie.hpp"
 #include <iostream>
 
 class Socket;
@@ -32,23 +33,29 @@ public:
   void clearRequest(void);
   int dataFd();
   void checkCgi();
+  std::string getUuid() const;
+  void setUuid(std::string const &uuid);
   void setConfig(std::vector<Configuration> const &conf);
+  Cookie &cookie();
 
   int recvRequest();
+  int readChunk();
   void handleResponse();
   void log(void) const;
 
 private:
   Socket *_socket;
-  Response _res;
   Request _req;
-  std::string _ip;
+  Response _res;
   size_t _id;
-  Configuration _config;
   int _fd;
   int _state;
+  std::string _uuid;
+  std::string _ip;
   std::string _request;
   std::string _serverName;
+  Cookie _cookie;
+  Configuration _config;
 };
 
 std::ostream &operator<<(std::ostream &o, Client const &r);

@@ -12,18 +12,18 @@
 
 #include "Request.hpp"
 #include "Client.hpp"
+#include "http_utils.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 Request::~Request() {}
 
 Request::Request() {}
 
 Request::Request(std::string const &request) : _requestLine(request) {
-  if (_requestLine.isRequestLineValid() < 0)
-    std::cerr << "invalid method or http version" << std::endl;
   fetchData(request);
   _isCGI = false;
   _cgiIndex = -1;
@@ -60,7 +60,7 @@ std::string Request::getAbsPath() const {
 void Request::setRequest(std::string const &request) {
   RequestLine req(request);
   _requestLine = req;
-  if (_requestLine.isRequestLineValid() < 0)
+  if (!_requestLine.isRLValid())
     std::cerr << "invalid method or http version" << std::endl;
   fetchData(request);
 }
@@ -72,6 +72,12 @@ std::string const &Request::body() const { return _body; }
 
 hashmap const &Request::headers() const { return _requestHeaders; }
 
+std::string Request::findValue(std::string const &value) const {
+  hashmap::const_iterator it = _requestHeaders.find(value);
+  if (it == _requestHeaders.end())
+    return "";
+  return it->second;
+}
 inline void trim(std::string &s) {
   size_t first = s.find_first_not_of(' ');
   size_t start = s.find_last_not_of(' ');
@@ -92,6 +98,9 @@ void Request::fetchData(std::string const &request) {
   pos = requestData.find("\r\n\r\n");
   std::string headers = requestData.substr(0, pos);
   _body = requestData.substr(pos + 4);
+  for (size_t i = 0; i < _body.size(); ++i) {
+      std::cout << "|i" << i << " c " << (int)_body[i] << "|";
+  }
   std::istringstream header_stream(headers);
   std::string header;
   size_t index;
@@ -108,13 +117,55 @@ void Request::fetchData(std::string const &request) {
   }
 }
 
+void Request::trimBody() {
+    size_t pos = _body.find("\r\n\r\n");
+    _body = _body.substr(0, pos);
+}
+void Request::unchunkRequest(void) {
+
+  std::string tmp = "";
+  std::string::size_type pos = 0;
+  std::string::size_type endPos;
+
+  while (pos < _body.length()) {
+    endPos = _body.find("\r\n", pos);
+    if (endPos == std::string::npos) {
+      throw std::runtime_error("Invalid Chunked Transfer Encoding");
+      return ;
+    }
+    std::string chunkSizeHex = _body.substr(pos, endPos - pos);
+
+    char *endPtr;
+    long chunkSize = std::strtol(chunkSizeHex.c_str(), &endPtr, 16);
+    if (*endPtr != '\0' || chunkSize < 0) {
+      throw std::runtime_error("Invalid Chunked Transfer Encoding");
+      return ;
+    }
+    pos = endPos + 2;
+
+    if (chunkSize == 0) {
+      break;
+    }
+
+    if (pos + chunkSize > _body.length()) {
+      throw std::runtime_error("Invalid Chunked Transfer Encoding");
+      return ;
+    }
+
+    tmp.append(_body, pos, chunkSize);
+
+    pos += chunkSize + 2;
+  }
+  _body = tmp;
+}
+
 inline std::string getExt(std::string const &s) {
   std::string tmp;
   size_t end = s.find_first_of('?');
   tmp = s.substr(0, end);
   size_t start = tmp.find_first_of('.');
   if (start == tmp.npos || start + 1 >= s.size())
-      return "";
+    return "";
   return tmp.substr(start + 1);
 }
 void Request::checkCGI(Client const &client) {
@@ -125,20 +176,31 @@ void Request::checkCGI(Client const &client) {
       _cgiIndex = i;
       std::string dummy(loc[i].get_value("cgi_path")[0]);
       _cgiPath = dummy;
-      return ;
+      return;
     }
   }
   _isCGI = false;
 }
 
-std::string Request::getCgiPath() const {
-    return _cgiPath;
-}
+std::string Request::getCgiPath() const { return _cgiPath; }
 bool Request::isCGI() const { return _isCGI; }
 
 int Request::validateRequest(Client const &cli) const {
-  std::cout << "max body size " << cli.getConfig().get_client_max_body_size()
-            << " payload size " << _body.size() << std::endl;
+  std::string method = _requestLine.getMethod();
+  if (!cli.getConfig().is_a_legit_Method(method))
+    return logError("Not a legit method", 400);
+  if (!_requestLine.isVersionValid())
+    return logError("Invalid http version", 400);
+  if (!_requestLine.isURIValid())
+    return logError("Invalid uri" ,400);
+  if (findValue("host").empty()) {
+    return logError("No host set", 400);
+  }
+  if (_requestLine.getRequestUri().size() > 4096)
+    return 414;
+  if (findValue("transfer-encoding") != "chunked" &&
+      findValue("content-length").empty() && _body.size() > 0)
+    return 411;
   if (_body.size() > cli.getConfig().get_client_max_body_size())
     return 413;
   return 0;

@@ -40,7 +40,7 @@ public:
 	void						show(void);
 	size_t						get_client_max_body_size(void) const;
 	bool						is_a_legit_Method(const std::string &) const;
-	bool						is_a_allowed_Method(const std::string &) const;
+	bool						is_a_allowed_Method(const std::string &, const std::string &) const;
 	std::string					get_path_upload(void) const;
 	std::string					get_error_page(size_t error_code) const;
 };

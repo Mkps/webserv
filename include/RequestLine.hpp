@@ -22,6 +22,8 @@ class RequestLine{
 		std::string const & getHttpVersion() const;
 		void				setHttpVersion(std::string &Uri);
 
-		int					isRequestLineValid();
+		bool isVersionValid() const;
+		bool isURIValid() const;
+        bool isRLValid() const;
 };
 #endif
