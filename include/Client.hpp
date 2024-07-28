@@ -39,6 +39,7 @@ public:
   Cookie &cookie();
 
   int recvRequest();
+  int readChunk();
   void handleResponse();
   void log(void) const;
 

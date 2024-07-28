@@ -4,6 +4,7 @@
 #include "Socket.hpp"
 #include <arpa/inet.h>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -43,9 +44,7 @@ int Client::getFd() const { return _fd; }
 
 std::string Client::getUuid() const { return _uuid; }
 
-void Client::setUuid(std::string const &uuid) {
-    _uuid = uuid;
-}
+void Client::setUuid(std::string const &uuid) { _uuid = uuid; }
 
 std::string Client::getRequest() const { return _request; }
 
@@ -55,67 +54,80 @@ int Client::getState() const { return _state; }
 
 void Client::clearRequest(void) { _request.clear(); }
 std::string generateUUID() {
-    char uuid[37]; // UUID is 36 characters plus null terminator
-    const char* hex_chars = "0123456789abcdef";
-    
-    srand((unsigned)time(0));
-    
-    for (int i = 0; i < 8; ++i) {
-        uuid[i] = hex_chars[rand() % 16];
-    }
-    uuid[8] = '-';
-    for (int i = 9; i < 13; ++i) {
-        uuid[i] = hex_chars[rand() % 16];
-    }
-    uuid[13] = '-';
-    
-    // UUID version 4 (4xxx)
-    uuid[14] = '4';
-    for (int i = 15; i < 18; ++i) {
-        uuid[i] = hex_chars[rand() % 16];
-    }
-    uuid[18] = '-';
-    
-    // UUID variant 1 (8xxx, 9xxx, Axxx, Bxxx)
-    uuid[19] = hex_chars[(rand() % 4) + 8];
-    for (int i = 20; i < 23; ++i) {
-        uuid[i] = hex_chars[rand() % 16];
-    }
-    uuid[23] = '-';
-    
-    for (int i = 24; i < 36; ++i) {
-        uuid[i] = hex_chars[rand() % 16];
-    }
-    uuid[36] = '\0';
-    
-    return std::string(uuid);
+  char uuid[37]; // UUID is 36 characters plus null terminator
+  const char *hex_chars = "0123456789abcdef";
+
+  srand((unsigned)time(0));
+
+  for (int i = 0; i < 8; ++i) {
+    uuid[i] = hex_chars[rand() % 16];
+  }
+  uuid[8] = '-';
+  for (int i = 9; i < 13; ++i) {
+    uuid[i] = hex_chars[rand() % 16];
+  }
+  uuid[13] = '-';
+
+  // UUID version 4 (4xxx)
+  uuid[14] = '4';
+  for (int i = 15; i < 18; ++i) {
+    uuid[i] = hex_chars[rand() % 16];
+  }
+  uuid[18] = '-';
+
+  // UUID variant 1 (8xxx, 9xxx, Axxx, Bxxx)
+  uuid[19] = hex_chars[(rand() % 4) + 8];
+  for (int i = 20; i < 23; ++i) {
+    uuid[i] = hex_chars[rand() % 16];
+  }
+  uuid[23] = '-';
+
+  for (int i = 24; i < 36; ++i) {
+    uuid[i] = hex_chars[rand() % 16];
+  }
+  uuid[36] = '\0';
+
+  return std::string(uuid);
 }
+
 int Client::recvRequest(void) {
   char buffer[BUFFER_SIZE + 1] = {0};
   int ret;
 
   ret = BUFFER_SIZE;
   _request.clear();
-  while (ret == BUFFER_SIZE) {
-    ret = recv(_fd, buffer, BUFFER_SIZE, 0);
-    if (ret <= 0) {
-      return (CLIENT_DISCONNECTED);
-    } else {
-      buffer[ret] = 0;
-      _request.append(buffer, ret);
+  if (_req.findValue("transfer-encoded") != "chunked") {
+    while (ret == BUFFER_SIZE) {
+      ret = recv(_fd, buffer, BUFFER_SIZE, 0);
+      if (ret <= 0) {
+        return (CLIENT_DISCONNECTED);
+      } else {
+        _request.append(buffer, ret);
+        bzero(buffer, sizeof(buffer));
+      }
     }
   }
   _req.setRequest(_request);
+  if (_req.findValue("transfer-encoding") == "chunked") {
+    try {
+      _req.unchunkRequest();
+    } catch (std::exception const &e) {
+      _res.setStatusCode(400);
+      _res.setBodyError(400, this->getConfig().get_error_page(400));
+      _state = C_RES;
+      return (CLIENT_CONNECTED);
+    }
+  }
   std::string tmp = _req.findValue("host");
   _serverName = tmp;
   if (!tmp.empty()) {
     size_t pos = _serverName.find(":");
     if (pos != tmp.npos)
-        _serverName = _serverName.substr(0, pos);
+      _serverName = _serverName.substr(0, pos);
   }
   _cookie.import(_req.findValue("cookie"));
   if (!_cookie.exist("uuid"))
-      _cookie.insert("uuid", generateUUID());
+    _cookie.insert("uuid", generateUUID());
   _state = C_REQ;
   return (CLIENT_CONNECTED);
 }
@@ -135,9 +147,7 @@ std::ostream &operator<<(std::ostream &o, Client const &r) {
   return o;
 }
 
-Cookie &Client::cookie() {
-    return _cookie;
-}
+Cookie &Client::cookie() { return _cookie; }
 void Client::checkCgi() {
   if (_state == C_CGI)
     _res.processCgi(_req, *this);
