@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Age Verification</title>
+</head>
+<body>
+    <h1>Age Verification</h1>
+    <p>Please enter your age:</p>
+    <input type="number" id="ageInput" min="0" max="120">
+    <button onclick="checkAge()">Submit</button>
+
+    <script>
+    function checkAge() {
+        var age = document.getElementById('ageInput').value;
+        if (age >= 18) {
+            // If 18 or older, set a cookie and proceed to the content
+            document.cookie = "age_verified=true; path=/; max-age=86400"; // Cookie expires in 24 hours
+            window.location.href = "/content.html"; // Redirect to your content page
+        } else {
+            // If under 18, redirect to the index page
+            alert("Sorry, you must be 18 or older to access this content.");
+            window.location.href = "/index.html";
+        }
+    }
+    </script>
+</body>
+</html>
