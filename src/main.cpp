@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/07/28 18:14:27 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/07/28 18:17:39 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,13 +42,10 @@ int main(int ac, char **av)
       throw std::invalid_argument("Incorrect argument count.");
     else
     {
-      if (isDirectory(av[1]))
-      {
-        if (static_cast<std::string>(av[1]).find("configurations/") == std::string::npos)
-          throw std::invalid_argument("Incorrect directory.");
-      }
-      else
+      if (isFile(av[1]))
         fileConfig = av[1];
+      else if (!isDirectory(av[1]))
+        throw std::invalid_argument("Incorrect argument it's not a Directory and not a File.");
     }
     std::vector<Configuration> ConfigurationForAllServ = getAllConf(fileConfig);
     for (std::vector<Configuration>::iterator it =
