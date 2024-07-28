@@ -14,12 +14,14 @@
 #define RESPONSE_HPP
 
 #include "CgiHandler.hpp"
+#include "Configuration.hpp"
 #include <map>
 #include <string>
 
 typedef std::map<std::string, std::string> hashmap;
 class Request;
 class Client;
+class Configuration;
 class Response {
 private:
   short _statusCode;
@@ -53,20 +55,19 @@ public:
 
   void clear();
   std::string writeHeader();
-  void processRequest(Request &req, Client &client);
   void sendResponse(int clientSocket);
   std::string chunkResponse();
 
   int handleCGI(int clientSocket, std::string const &script,
                 std::string const &query);
+  void processRequest(Request &req, Client &client);
   void processCgi(Request &req, Client &client);
-  void httpMethodDelete(Request const &req);
-  void httpMethodGet(Request const &req);
-  void httpMethodPost(Request const &req, std::string const &client);
+  bool isAutoindex(Request const &req, Configuration const &conf);
   std::string findContentType();
   void findPath(Request const &req);
   CgiHandler cgi();
 
   friend class HttpRedirect;
+  friend class HttpMethod;
 };
 #endif

@@ -27,8 +27,9 @@ SRC_FILES = main.cpp			\
 			Request.cpp			\
 			RequestLine.cpp		\
 			Response.cpp		\
-			HttpRedirect.cpp	\
 			HttpAutoindex.cpp	\
+			HttpMethod.cpp		\
+			HttpRedirect.cpp	\
 			http_utils.cpp		\
 			Configuration.cpp	\
 			Location.cpp
