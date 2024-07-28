@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "Configuration.hpp"
+#include "http_utils.hpp"
 #include <sstream>
 
 /////////////////////////////////////////////
@@ -151,11 +152,11 @@ std::vector<Location> Configuration::get_locations(void) const {
 std::vector<Location>
 Configuration::get_locations_by_path(std::string path) const {
   std::vector<Location>::const_iterator it = this->_locations.begin();
-
   std::vector<Location> res = std::vector<Location>();
-  for (; it != this->_locations.end(); it++) {
-    if (it->get_path() == path)
+  for (; it != this->_locations.end(); ++it) {
+    if (it->get_path() == path){
       res.push_back(*it);
+    }
   }
   return res;
 }
@@ -245,12 +246,25 @@ bool Configuration::is_a_allowed_Method(const std::string &methode,
   return (false);
 }
 
-// retourne le chemin d'upload si vide ou rie alors retourne "./"
+// retourne le chemin d'upload si vide ou rien alors retourne ""
 std::string Configuration::get_path_upload(void) const {
   std::vector<std::string> all_res = this->get_value("upload_path");
   if (all_res.empty() || all_res[0].empty())
     return ("");
   return (all_res[0]);
+}
+
+// retourne une redirection
+std::string Configuration::get_redirect(std::string const &path) const {
+  std::vector<std::string> all_res;
+  std::vector<Location> l = get_locations_by_path(path);
+  std::string tmpstr = "";
+  if (l.empty())
+      return "";
+  all_res = l[0].get_value("redirect");
+  if (all_res.empty() || all_res[0].empty())
+    return ("");
+  return all_res[0];
 }
 
 // retourne la page derreur en fonction du code et retourne une string vide si

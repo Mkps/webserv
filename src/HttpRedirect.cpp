@@ -3,8 +3,6 @@
 #include "Request.hpp"
 #include "Response.hpp"
 #include "http_utils.hpp"
-#include <algorithm>
-#include <iostream>
 #include <vector>
 HttpRedirect::HttpRedirect() {}
 
@@ -25,12 +23,13 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')
     root = root.substr(0, root.size() - 1);
   std::string path = root + req.getFilePath();
-  std::cout << "path is " << path << std::endl;
-  if (req.getFilePath() == "/funny") {
-    std::cout << "Never gonna give you up" << std::endl;
+  std::string redir = conf.get_redirect(req.getFilePath());
+  if (!redir.empty()) {
+    logItem("redirecting to", redir);
     response._statusCode = 302;
-    response.setHeader("Location",
-                       "https://www.youtube.com/watch?v=dQw4w9WgXcQ", true);
+    if (redir.find("http://") == redir.npos)
+      redir = "http://" + redir;
+    response.setHeader("Location", redir, true);
     return;
   }
   response._path = path;
@@ -38,7 +37,6 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
     return;
   if (req.isCGI())
     return;
-  // Check for redirection here
   std::vector<Location> lv = conf.get_locations_by_path(req.getFilePath());
   std::vector<std::string> tryFiles;
   if (!lv.empty()) {
