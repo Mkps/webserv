@@ -36,8 +36,10 @@ int sendChunk(int clientSocket, std::string const &chunk) {
 
 int fileStatus(const std::string &path) {
   struct stat buf;
+  if (path.empty())
+      return FILE_NOT;
   if (stat(path.c_str(), &buf) == 0) {
-    if (buf.st_mode & S_IFDIR)
+    if (buf.st_mode & S_IFDIR || *path.rbegin() == '/')
       return FILE_DIR;
     else if (buf.st_mode & S_IFREG)
       return FILE_REG;
