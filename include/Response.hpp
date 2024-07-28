@@ -43,7 +43,7 @@ public:
   size_t const &getContentLength() const;
 
   std::string getResponseMsg();
-  void setBodyError(int status);
+  void setBodyError(int status, std::string error_page);
   void setBody(std::string const &filename);
   hashmap const &getHeader() const;
   std::string getHeaderValue(std::string const &key) const;
@@ -62,7 +62,7 @@ public:
   void processCgi(Request &req, Client &client);
   void httpMethodDelete(Request const &req);
   void httpMethodGet(Request const &req);
-  void httpMethodPost(Request const &req);
+  void httpMethodPost(Request const &req, std::string const &client);
   std::string findContentType();
   void findPath(Request const &req);
   CgiHandler cgi();
