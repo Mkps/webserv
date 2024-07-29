@@ -5,6 +5,7 @@
 
 #define DEBUG 1
 
+class Client;
 enum e_fileStatus{FILE_REG = 0, FILE_DIR, FILE_NOT, FILE_ELS};
 
 template <typename T>
@@ -21,5 +22,7 @@ void logStep(std::string const &s, int n);
 void logItem(std::string const &s, std::string const &item) ;
 void logItem(std::string const &s, int const &item) ;
 int logError(std::string const &s, int const &status) ;
+std::string errPage(Client &client, size_t error_code);
+std::string getResponse(short status);
 
 #endif

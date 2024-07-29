@@ -5,6 +5,7 @@
 #include <sstream>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include "Client.hpp"
 
 std::string to_hex(size_t value) {
   std::ostringstream oss(std::ios::binary);
@@ -103,4 +104,49 @@ void logItem(std::string const &s, int const &item) {
 int logError(std::string const &s, int const &status) {
     std::cerr << "Log: " << s << std::endl;
     return status;
+}
+std::string errPage(Client &client, size_t error_code) {
+  return client.getConfig().get_error_page(error_code);
+}
+
+std::string getResponse(short status) {
+  if (status >= 100 && status < 200) {
+    return "Informational";
+  } else if (status >= 200 && status < 300) {
+    if (status == 201)
+      return "Created";
+    else if (status == 204)
+      return "No Response";
+    return "OK";
+  } else if (status >= 300 && status < 400) {
+    if (status == 301)
+      return "Moved Permanently";
+    else if (status == 302)
+      return "Found";
+    return "Redirection";
+  } else if (status >= 400 && status < 500) {
+    if (status == 400)
+      return "Bad Request";
+    else if (status == 403)
+      return "Forbidden";
+    else if (status == 404)
+      return "Not Found";
+    else if (status == 405)
+      return "Method Not Allowed";
+    else if (status == 406)
+      return "Not Acceptable";
+    else if (status == 411)
+      return "Length Required";
+    else if (status == 414)
+      return "Request-URI Too Long";
+    else
+      return "Client Error";
+  } else if (status >= 500 && status < 600) {
+    if (status == 502)
+      return "Bad Gateway";
+    if (status == 504)
+      return "Gateway Timeout";
+    return "Internal Server Error";
+  } else
+    return "Unidentified Error";
 }
