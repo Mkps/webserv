@@ -52,17 +52,16 @@ public:
   void setHeader(std::string const &key, std::string const &value,
                  bool overwrite);
   void setDefaultHeaders();
-
   void clear();
   std::string writeHeader();
   void sendResponse(int clientSocket);
   std::string chunkResponse();
-
   int handleCGI(int clientSocket, std::string const &script,
                 std::string const &query);
   void processRequest(Request &req, Client &client);
   void processCgi(Request &req, Client &client);
   bool isAutoindex(Request const &req, Configuration const &conf);
+  void makeAutoindex(Request const &req, Client &client);
   std::string findContentType();
   void findPath(Request const &req);
   CgiHandler cgi();

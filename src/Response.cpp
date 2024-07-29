@@ -70,51 +70,6 @@ void Response::setHeader(std::string const &key, std::string const &value,
   _responseHeaders[key] = value;
 }
 
-inline std::string errPage(Client &client, size_t error_code) {
-  return client.getConfig().get_error_page(error_code);
-}
-inline std::string getResponse(short status) {
-  if (status >= 100 && status < 200) {
-    return "Informational";
-  } else if (status >= 200 && status < 300) {
-    if (status == 201)
-      return "Created";
-    else if (status == 204)
-      return "No Response";
-    return "OK";
-  } else if (status >= 300 && status < 400) {
-    if (status == 301)
-      return "Moved Permanently";
-    else if (status == 302)
-      return "Found";
-    return "Redirection";
-  } else if (status >= 400 && status < 500) {
-    if (status == 400)
-      return "Bad Request";
-    else if (status == 403)
-      return "Forbidden";
-    else if (status == 404)
-      return "Not Found";
-    else if (status == 405)
-      return "Method Not Allowed";
-    else if (status == 406)
-      return "Not Acceptable";
-    else if (status == 411)
-      return "Length Required";
-    else if (status == 414)
-      return "Request-URI Too Long";
-    else
-      return "Client Error";
-  } else if (status >= 500 && status < 600) {
-    if (status == 502)
-      return "Bad Gateway";
-    if (status == 504)
-      return "Gateway Timeout";
-    return "Internal Server Error";
-  } else
-    return "Unidentified Error";
-}
-
 void Response::processCgi(Request &req, Client &client) {
   (void)req;
   std::cout << "processCgi" << std::endl;
@@ -144,17 +99,39 @@ void Response::processCgi(Request &req, Client &client) {
 }
 
 bool Response::isAutoindex(Request const &req, Configuration const &conf) {
-    if (_statusCode != 403)
-        return false;
-    std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());
-    if (l.empty())
-        return false;
-    if (l[0].get_value("autoindex").empty())
-        return false;
-    std::string autoindex = l[0].get_value("autoindex")[0];
-    if (autoindex != "on")
-        return false;
-    return true;
+  std::vector<std::string> autoindex;
+  if (_statusCode != 403)
+    return false;
+  std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());
+  if (l.empty()) {
+    autoindex = conf.get_value("autoindex");
+  } else {
+    autoindex = l[0].get_value("autoindex");
+  }
+  if (autoindex.empty())
+      return false;
+  if (autoindex[0] != "on")
+    return false;
+  return true;
+}
+
+void Response::makeAutoindex(Request const &req, Client &client) {
+  _statusCode = 200;
+  try {
+    _body = HttpAutoindex::generateIndex(req, _path);
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    setHeader("Content-Type", "text/html", true);
+  } catch (HttpAutoindex::FolderRedirect const &e) {
+    _statusCode = 301;
+    _body = "";
+    _responseHeaders.clear();
+    setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
+              true);
+
+  } catch (HttpAutoindex::NoPathException const &e) {
+    setBodyError(404, errPage(client, 404));
+  }
+  client.setState(C_RES);
 }
 
 void Response::processRequest(Request &req, Client &client) {
@@ -179,22 +156,8 @@ void Response::processRequest(Request &req, Client &client) {
   HttpRedirect::handleRedirect(req, *this, conf);
   if (req.line().getMethod() == "GET") {
     if (isAutoindex(req, conf)) {
-      _statusCode = 200;
-      try {
-        _body = HttpAutoindex::generateIndex(req, _path);
-        setHeader("Content-Length", sizeToStr(_body.size()), true);
-        setHeader("Content-Type", "text/html", true);
-      } catch (HttpAutoindex::FolderRedirect const &e) {
-        _statusCode = 301;
-        _body = "";
-        _responseHeaders.clear();
-        setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
-                  true);
-
-      } catch (HttpAutoindex::NoPathException const &e) {
-        setBodyError(404, errPage(client, 404));
-      }
-      client.setState(C_RES);
+      logStep("autoindex", 1);
+      makeAutoindex(req, client);
       return;
     }
     HttpMethod::get(req, *this);
@@ -330,8 +293,6 @@ void Response::sendResponse(int clientSocket) {
     std::string chunk = chunkResponse();
     sendStr(clientSocket, chunk);
   } else {
-    if (!_body.empty())
-      _body += "\r\n\r\n";
     res << writeHeader() << _body;
     if (DEBUG)
       std::cout << writeHeader() << _body << std::endl;
