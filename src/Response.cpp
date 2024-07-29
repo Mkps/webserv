@@ -70,7 +70,6 @@ void Response::setHeader(std::string const &key, std::string const &value,
   _responseHeaders[key] = value;
 }
 
-
 void Response::processCgi(Request &req, Client &client) {
   (void)req;
   std::cout << "processCgi" << std::endl;
@@ -100,36 +99,39 @@ void Response::processCgi(Request &req, Client &client) {
 }
 
 bool Response::isAutoindex(Request const &req, Configuration const &conf) {
-    if (_statusCode != 403)
-        return false;
-    std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());
-    if (l.empty())
-        return false;
-    if (l[0].get_value("autoindex").empty())
-        return false;
-    std::string autoindex = l[0].get_value("autoindex")[0];
-    if (autoindex != "on")
-        return false;
-    return true;
+  std::vector<std::string> autoindex;
+  if (_statusCode != 403)
+    return false;
+  std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());
+  if (l.empty()) {
+    autoindex = conf.get_value("autoindex");
+  } else {
+    autoindex = l[0].get_value("autoindex");
+  }
+  if (autoindex.empty())
+      return false;
+  if (autoindex[0] != "on")
+    return false;
+  return true;
 }
 
 void Response::makeAutoindex(Request const &req, Client &client) {
-      _statusCode = 200;
-      try {
-        _body = HttpAutoindex::generateIndex(req, _path);
-        setHeader("Content-Length", sizeToStr(_body.size()), true);
-        setHeader("Content-Type", "text/html", true);
-      } catch (HttpAutoindex::FolderRedirect const &e) {
-        _statusCode = 301;
-        _body = "";
-        _responseHeaders.clear();
-        setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
-                  true);
+  _statusCode = 200;
+  try {
+    _body = HttpAutoindex::generateIndex(req, _path);
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    setHeader("Content-Type", "text/html", true);
+  } catch (HttpAutoindex::FolderRedirect const &e) {
+    _statusCode = 301;
+    _body = "";
+    _responseHeaders.clear();
+    setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
+              true);
 
-      } catch (HttpAutoindex::NoPathException const &e) {
-        setBodyError(404, errPage(client, 404));
-      }
-      client.setState(C_RES);
+  } catch (HttpAutoindex::NoPathException const &e) {
+    setBodyError(404, errPage(client, 404));
+  }
+  client.setState(C_RES);
 }
 
 void Response::processRequest(Request &req, Client &client) {
@@ -154,6 +156,7 @@ void Response::processRequest(Request &req, Client &client) {
   HttpRedirect::handleRedirect(req, *this, conf);
   if (req.line().getMethod() == "GET") {
     if (isAutoindex(req, conf)) {
+      logStep("autoindex", 1);
       makeAutoindex(req, client);
       return;
     }
