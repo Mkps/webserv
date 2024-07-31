@@ -12,6 +12,7 @@
 
 #include "CgiHandler.hpp"
 #include "http_utils.hpp"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -24,43 +25,48 @@
 #include <unistd.h>
 
 // Private Member Functions
-hashmap CgiHandler::_setEnvGet(const std::string &script,
-                               const std::string &query) {
-  hashmap tmp;
-  tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
-  tmp["QUERY_STRING"] = query;
-  tmp["REQUEST_METHOD"] = "GET";
-  tmp["SCRIPT_FILENAME"] = script;
-  tmp["SERVER_PROTOCOL"] = "HTTP/1.1";
-  tmp["REMOTE_ADDR"] = "127.0.0.1";
-  return tmp;
+void CgiHandler::_setEnvGet(const std::string &script,
+                            const std::string &query) {
+  _env["GATEWAY_INTERFACE"] = "CGI/1.1";
+  _env["PATH_INFO"] = script + query;
+  _env["QUERY_STRING"] = query;
+  _env["REQUEST_METHOD"] = "GET";
+  _env["SCRIPT_FILENAME"] = script;
+  _env["REDIRECT_STATUS"] = "CGI";
+  _env["SERVER_PROTOCOL"] = "HTTP/1.1";
+  _env["REMOTE_ADDR"] = "127.0.0.1";
+  _env["CONTENT_LENGTH"] = "0";
+  _env.erase("CONTENT_TYPE");
 }
 
-hashmap CgiHandler::_setEnvPost(const std::string &script,
-                                const std::string &query) {
-  hashmap tmp;
-  tmp["CONTENT_LENGTH"] = sizeToStr(_requestBody.size());
-  tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
-  tmp["QUERY_STRING"] = query;
-  tmp["REQUEST_METHOD"] = "POST";
-  tmp["SCRIPT_FILENAME"] = script;
-  tmp["SERVER_PROTOCOL"] = "HTTP/1.1";
-  tmp["REMOTE_ADDR"] = "127.0.0.1";
-  return tmp;
+void CgiHandler::_setEnvPost(const std::string &script,
+                             const std::string &query) {
+  _env["GATEWAY_INTERFACE"] = "CGI/1.1";
+  _env["PATH_INFO"] = script + query;
+  _env["QUERY_STRING"] = query;
+  _env["REQUEST_METHOD"] = "POST";
+  _env["SCRIPT_FILENAME"] = script;
+  _env["REDIRECT_STATUS"] = "CGI";
+  _env["SERVER_PROTOCOL"] = "HTTP/1.1";
+  _env["REMOTE_ADDR"] = "127.0.0.1";
 }
 
 // Public Member Functions
 //
 // ### Constructors/Coplien
 CgiHandler::CgiHandler() {
+  _status = 0;
   _envv = NULL;
+  _err = 0;
   _isRunning = false;
 }
 
 CgiHandler::CgiHandler(std::string const &uri) {
+  _status = 0;
   _envv = NULL;
   _isRunning = false;
   _script = uri;
+  _err = 0;
   size_t query_pos = _script.find("?");
   if (query_pos != std::string::npos) {
     _qData = _script.substr(query_pos + 1);
@@ -68,9 +74,11 @@ CgiHandler::CgiHandler(std::string const &uri) {
   }
 }
 CgiHandler::CgiHandler(std::string const &script, std::string const &query) {
+  _status = 0;
   _envv = NULL;
   _script = script;
   _qData = query;
+  _err = 0;
 }
 
 CgiHandler::~CgiHandler() {
@@ -81,6 +89,7 @@ CgiHandler::~CgiHandler() {
     delete[] _envv;
     _envv = NULL;
   }
+  _env.clear();
 }
 
 void CgiHandler::freeEnvv() {
@@ -118,10 +127,8 @@ inline int set_socket_nonblocking(int sockfd) {
 }
 
 void CgiHandler::_execCGIGet() {
-  hashmap env;
-  env = _setEnvGet(_script, _qData);
-  _envv = hashmapToChrArray(env);
-  /* exit(127); */
+  _setEnvGet(_script, _qData);
+  _envv = hashmapToChrArray(_env);
   std::string cmd = _cgiBin;
   if (cmd.empty())
     cmd = _script;
@@ -141,10 +148,12 @@ void CgiHandler::_execCGIGet() {
   delete[] script_array[0];
   if (cmd != _script)
     delete[] script_array[1];
-  throw std::runtime_error("502 execve error");
+  _err = 1;
+  throw std::runtime_error("500 execve error");
 }
+
 int CgiHandler::handleGet() {
-  if (access(_script.c_str(), F_OK | X_OK))
+  if (access(_script.c_str(), F_OK | X_OK) && _cgiBin.empty())
     return 403;
   if (pipe(_pipefd) == -1) {
     std::cerr << "pipe failed" << std::endl;
@@ -152,7 +161,6 @@ int CgiHandler::handleGet() {
   }
   gettimeofday(&_startTime, NULL);
   _pid = fork();
-  _isRunning = true;
   if (_pid < 0) {
     std::cerr << "Fork failed" << std::endl;
     return 500;
@@ -165,19 +173,17 @@ int CgiHandler::handleGet() {
   } else {
     close(_pipefd[1]);
     set_socket_nonblocking(_pipefd[0]);
-    char buffer[4096];
-    _body = "";
-    size_t n;
+    _isRunning = false;
     int child_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
-    std::cout << "child status " << child_status << std::endl;
     if (child_status == -1) {
       _isRunning = false;
       return 500;
     } else if (child_status == 0) {
       _isRunning = true;
     } else {
+      int n = 0;
+      char buffer[1024];
       while ((n = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
-        /*std::cout << "reading " << buffer << std::endl;*/
         _body.append(buffer, n);
       }
       close(_pipefd[0]);
@@ -189,14 +195,15 @@ int CgiHandler::handleGet() {
 int CgiHandler::getProcessState() {
   int process_status;
   process_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
-  if (process_status)
+  if (process_status) {
     _isRunning = false;
-  if (process_status > 0) {
-    char buffer[1024];
-    _body = "";
-    int bytesRead;
-    while ((bytesRead = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
-      _body.append(buffer, bytesRead);
+    if (process_status > 0) {
+      char buffer[1024];
+      _body = "";
+      int bytesRead;
+      while ((bytesRead = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
+        _body.append(buffer, bytesRead);
+      }
     }
     close(_pipefd[0]);
   }
@@ -204,11 +211,13 @@ int CgiHandler::getProcessState() {
 }
 
 int CgiHandler::getStatus() {
+  if (_err == 1)
+    return 500;
   if (WIFEXITED(_status)) {
-    if (WEXITSTATUS(_status))
-      return 502;
-    else if (!WEXITSTATUS(_status))
-      return 200;
+    return 200;
+  }
+  if (WIFSIGNALED(_status)) {
+    return 500;
   }
   return 444;
 }
@@ -219,7 +228,6 @@ int CgiHandler::timeout() {
   gettimeofday(&currentTime, NULL);
   double elapsedTime = (currentTime.tv_sec - _startTime.tv_sec) +
                        (currentTime.tv_usec - _startTime.tv_usec) / 1000000.0;
-  std::cout << "elapsed time " << elapsedTime << std::endl;
   if (elapsedTime > CGI_TIMEOUT)
     return 1;
   return 0;
@@ -227,14 +235,13 @@ int CgiHandler::timeout() {
 
 void CgiHandler::killCgi() {
   kill(_pid, SIGKILL);
-  close (_pipefd[0]);
+  close(_pipefd[0]);
   std::cerr << "KILLING CGI" << std::endl;
 }
 
 void CgiHandler::_execCGIPost() {
-  hashmap env;
-  env = _setEnvPost(_script, _qData);
-  _envv = hashmapToChrArray(env);
+  _setEnvPost(_script, _qData);
+  _envv = hashmapToChrArray(_env);
   std::string cmd = _cgiBin;
   if (cmd.empty())
     cmd = _script;
@@ -250,71 +257,81 @@ void CgiHandler::_execCGIPost() {
     script_array[1] = NULL;
   }
   script_array[2] = NULL;
-  std::cout << "POST EXEC" << std::endl;
+  std::cerr << "POST EXEC" << std::endl;
   execve(cmd.c_str(), script_array, _envv);
-  if (access(_script.c_str(), F_OK | X_OK)) {
-    exit(126);
-  }
   delete[] script_array[0];
   if (cmd != _script)
     delete[] script_array[1];
-  execve(_script.c_str(), script_array, _envv);
-  delete[] script_array[0];
-  throw std::runtime_error("502 execve error");
+  _err = 1;
+  throw std::runtime_error("500 execve error");
 }
 int CgiHandler::handlePost() {
-  int stdinPipe[2];
 
-  if (pipe(stdinPipe) || pipe(_pipefd)) {
+  if (pipe(_pipefd)) {
     std::cerr << "Pipe failed" << std::endl;
     return 500;
   }
-  pid_t pid = fork();
-  if (pid < 0) {
+  int fdin = dup(STDIN_FILENO);
+  int fdout = dup(STDOUT_FILENO);
+  gettimeofday(&_startTime, NULL);
+  _pid = fork();
+  if (_pid < 0) {
     std::cerr << "Fork failed" << std::endl;
     return 500;
   }
 
-  if (pid == 0) {
-    close(stdinPipe[1]);
-    dup2(stdinPipe[0], STDIN_FILENO);
-    close(stdinPipe[0]);
-
-    close(_pipefd[0]);
+  if (_pid == 0) {
+    dup2(_pipefd[0], STDIN_FILENO);
     dup2(_pipefd[1], STDOUT_FILENO);
+    close(_pipefd[0]);
     close(_pipefd[1]);
-
     _execCGIPost();
   } else {
-    close(stdinPipe[0]);
-    write(stdinPipe[1], _requestBody.c_str(), _requestBody.size());
-    close(stdinPipe[1]);
+    int bytesSent = 0;
+    int tmp;
+    set_socket_nonblocking(_pipefd[1]);
+    while (bytesSent < static_cast<int>(_requestBody.size())) {
+      tmp = write(_pipefd[1], _requestBody.c_str() + bytesSent,
+                  _requestBody.size() - bytesSent);
+      if (tmp > 0)
+        bytesSent += tmp;
+    }
     close(_pipefd[1]);
     set_socket_nonblocking(_pipefd[0]);
-    char buffer[4096];
     _body = "";
-    size_t n;
+    _isRunning = true;
     int child_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
-    std::cout << "child status " << child_status << std::endl;
+    dup2(fdin, STDIN_FILENO);
+    dup2(fdout, STDIN_FILENO);
     if (child_status == -1) {
       _isRunning = false;
       return 500;
-    } else if (child_status == 0) {
-      _isRunning = true;
-    } else {
-      while ((n = read(_pipefd[0], buffer, sizeof(buffer))) > 0) {
-        /*std::cout << "reading " << buffer << std::endl;*/
-        _body.append(buffer, n);
-      }
-      close(_pipefd[0]);
     }
   }
   return 200;
 }
 
+inline char tocgi(char c) {
+  if (isalpha(c))
+    return (toupper(c));
+  else if (c == '-')
+    return '_';
+  else
+    return c;
+}
 // ### Getters/Setters ###/
 std::string const &CgiHandler::body() const { return _body; }
 
+void CgiHandler::setHeaders(hashmap const &requestHeaders) {
+  hashmap::const_iterator it = requestHeaders.begin();
+  for (; it != requestHeaders.end(); ++it) {
+    std::string tmp = it->first;
+    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tocgi);
+    if (tmp == "CONTENT_LENGTH" || tmp == "CONTENT_TYPE") {
+      _env[tmp] = it->second;
+    }
+  }
+}
 void CgiHandler::setRequestBody(std::string const &requestbody) {
   _requestBody = requestbody;
 }
@@ -323,9 +340,7 @@ void setScript(std::string const &script);
 void CgiHandler::setCgiBin(std::string const &cgiBin) { _cgiBin = cgiBin; }
 
 void setQueryData(std::string const &qData);
-int CgiHandler::getFd(){
-    return _pipefd[0];
-}
+int CgiHandler::getFd() { return _pipefd[0]; }
 
 // Helper function
 inline char **hashmapToChrArray(hashmap const &map) {

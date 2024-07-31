@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
 #include <sys/stat.h>
 #include <vector>
 
@@ -62,7 +61,6 @@ inline std::string listDirectories(std::string const &filepath,
 
   struct dirent *dp;
   while ((dp = readdir(dirp)) != NULL) {
-    std::cout << dp->d_name << std::endl;
     v.push_back(dp->d_name);
   }
   closedir(dirp);
@@ -78,7 +76,6 @@ inline std::string listDirectories(std::string const &filepath,
       ss << "/";
     ss << "</a>";
     ss << do_tabs(v.front().size());
-    std::cout << "vfront " << v.front() << std::endl;
     if (v.front() != "..")
       ss << get_fileinfo(filepath + v.front());
     ss << "\n";
@@ -90,7 +87,6 @@ std::string HttpAutoindex::generateIndex(Request const &req,
                                          std::string const &path) {
   std::ostringstream ss;
 
-  std::cout << "path ####" << path /*<< " rbegin " << *path.rbegin()*/ << std::endl;
   if (*path.rbegin() != '/')
       throw HttpAutoindex::FolderRedirect();
   if (!path.empty()) {

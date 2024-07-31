@@ -36,7 +36,7 @@ bool isFile(const std::string& path) {
 int main(int ac, char **av)
 {
   const std::string defaultfile = "configurations/minimal.config";
-  try {
+  //try {
     std::string fileConfig = defaultfile;
     if (ac > 2 || ac < 2)
       throw std::invalid_argument("Incorrect argument count.");
@@ -57,9 +57,9 @@ int main(int ac, char **av)
     Server *server = new Server(ConfigurationForAllServ);
     server->run();
     delete server;
-  } catch (const std::exception &e) {
-    std::cerr << RED "Error: " NOCOLOR << e.what() << '\n';
-    return (1);
-  }
+  /*} catch (const std::exception &e) {*/
+  /*  std::cerr << RED "Error: " NOCOLOR << e.what() << '\n';*/
+  /*  return (1);*/
+  /*}*/
   return 0;
 }

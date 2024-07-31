@@ -34,7 +34,7 @@ Cookie &Cookie::operator=(Cookie const &rhs){
 bool Cookie::empty() const {
     return _data.empty();
 }
-#include <iostream>
+//#include <iostream>
 //returns the full cookieheader value as a string
 std::string Cookie::full() const {
     std::string tmp;
@@ -46,7 +46,7 @@ std::string Cookie::full() const {
     size_t pos = tmp.find_last_of(";");
     if (pos != tmp.npos)
         tmp = tmp.substr(0, pos);
-    std::cout << "Cookies are " << tmp << std::endl;
+    //std::cout << "Cookies are " << tmp << std::endl;
     return tmp;
 }
 

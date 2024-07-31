@@ -23,3 +23,4 @@ document.getElementById('uploadForm').addEventListener('submit', function(event)
         document.getElementById('result').innerText = 'Error uploading file: ' + error;
     });
 });
+

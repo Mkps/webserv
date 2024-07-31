@@ -60,8 +60,6 @@ std::string Request::getAbsPath() const {
 void Request::setRequest(std::string const &request) {
   RequestLine req(request);
   _requestLine = req;
-  if (!_requestLine.isRLValid())
-    std::cerr << "invalid method or http version" << std::endl;
   fetchData(request);
 }
 
@@ -78,17 +76,6 @@ std::string Request::findValue(std::string const &value) const {
     return "";
   return it->second;
 }
-inline void trim(std::string &s) {
-  size_t first = s.find_first_not_of(' ');
-  size_t start = s.find_last_not_of(' ');
-  s = s.substr(first, start - first + 1);
-}
-
-// trim from both ends (copying)
-inline std::string trim_copy(std::string s) {
-  trim(s);
-  return s;
-}
 
 void Request::fetchData(std::string const &request) {
   size_t pos = request.find("\r\n");
@@ -97,10 +84,8 @@ void Request::fetchData(std::string const &request) {
 
   pos = requestData.find("\r\n\r\n");
   std::string headers = requestData.substr(0, pos);
-  _body = requestData.substr(pos + 4);
-  for (size_t i = 0; i < _body.size(); ++i) {
-      std::cout << "|i" << i << " c " << (int)_body[i] << "|";
-  }
+  if (pos != _body.npos)
+    _body = requestData.substr(pos + 4);
   std::istringstream header_stream(headers);
   std::string header;
   size_t index;
@@ -110,7 +95,8 @@ void Request::fetchData(std::string const &request) {
       std::string key = trim_copy(header.substr(0, index));
       std::string value = trim_copy(header.substr(index + 1));
       pos = value.find("\r");
-      value = value.substr(0, pos);
+      if (pos != value.npos)
+        value = value.substr(0, pos);
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       _requestHeaders[key] = value;
     }
@@ -118,7 +104,8 @@ void Request::fetchData(std::string const &request) {
 }
 
 void Request::trimBody() {
-    size_t pos = _body.find("\r\n\r\n");
+  size_t pos = _body.find("\r\n\r\n");
+  if (pos != _body.npos)
     _body = _body.substr(0, pos);
 }
 void Request::unchunkRequest(void) {
@@ -131,7 +118,7 @@ void Request::unchunkRequest(void) {
     endPos = _body.find("\r\n", pos);
     if (endPos == std::string::npos) {
       throw std::runtime_error("Invalid Chunked Transfer Encoding");
-      return ;
+      return;
     }
     std::string chunkSizeHex = _body.substr(pos, endPos - pos);
 
@@ -139,7 +126,7 @@ void Request::unchunkRequest(void) {
     long chunkSize = std::strtol(chunkSizeHex.c_str(), &endPtr, 16);
     if (*endPtr != '\0' || chunkSize < 0) {
       throw std::runtime_error("Invalid Chunked Transfer Encoding");
-      return ;
+      return;
     }
     pos = endPos + 2;
 
@@ -149,7 +136,7 @@ void Request::unchunkRequest(void) {
 
     if (pos + chunkSize > _body.length()) {
       throw std::runtime_error("Invalid Chunked Transfer Encoding");
-      return ;
+      return;
     }
 
     tmp.append(_body, pos, chunkSize);
@@ -191,17 +178,24 @@ int Request::validateRequest(Client const &cli) const {
     return logError("Not a legit method", 400);
   if (!_requestLine.isVersionValid())
     return logError("Invalid http version", 400);
+  if (_requestLine.getRequestUri().size() > 4096)
+    return logError("uri too long", 414);
   if (!_requestLine.isURIValid())
-    return logError("Invalid uri" ,400);
+    return logError("Invalid uri", 400);
   if (findValue("host").empty()) {
     return logError("No host set", 400);
   }
-  if (_requestLine.getRequestUri().size() > 4096)
-    return 414;
   if (findValue("transfer-encoding") != "chunked" &&
       findValue("content-length").empty() && _body.size() > 0)
     return 411;
   if (_body.size() > cli.getConfig().get_client_max_body_size())
     return 413;
   return 0;
+}
+void Request::clear() {
+  _requestHeaders.clear();
+  _isCGI = false;
+  _body = "";
+  _cgiIndex = 0;
+  _cgiPath = "";
 }

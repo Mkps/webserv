@@ -24,13 +24,10 @@ int sendChunk(int clientSocket, std::string const &chunk) {
   std::string chunkMsg = chunk + "\r\n";
   tmp = send(clientSocket, size.c_str(), size.size(), 0);
   if ((size_t)tmp != size.size()) {
-    std::cout << "size " << tmp << std::endl;
+    std::cerr << "Warning: Message was not fully sent" << std::endl;
   }
   ret += tmp;
   tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
-  if ((size_t)tmp != chunkMsg.size()) {
-    std::cout << "chunk " << tmp << std::endl;
-  }
   ret += tmp;
   return ret;
 }
@@ -150,3 +147,31 @@ std::string getResponse(short status) {
   } else
     return "Unidentified Error";
 }
+static void trim(std::string &s) {
+  size_t first = s.find_first_not_of(' ');
+  size_t start = s.find_last_not_of(' ');
+  s = s.substr(first, start - first + 1);
+}
+
+// trim from both ends (copying)
+std::string trim_copy(std::string s) {
+  trim(s);
+  return s;
+}
+
+std::string formatHeader(const std::string& input) {
+    std::string result = input;
+    bool capitalizeNext = true;
+    for (std::string::iterator it = result.begin(); it != result.end(); ++it) {
+        if (!std::isalpha(*it)) {
+            capitalizeNext = true;
+        } else if (capitalizeNext && std::isalpha(*it)) {
+            *it = std::toupper(*it);
+            capitalizeNext = false;
+        } else {
+            *it = std::tolower(*it);
+        }
+    }
+    return result;
+}
+

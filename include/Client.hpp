@@ -2,16 +2,16 @@
 #define CLIENT_HPP
 
 #include "Configuration.hpp"
+#include "Cookie.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
-#include "Cookie.hpp"
 #include <iostream>
 
 class Socket;
 
 #define BUFFER_SIZE 1024
 
-enum e_reqest_state { C_OFF, C_REQ, C_CGI, C_RES };
+enum e_reqest_state { C_OFF, C_RECV, C_REQ, C_CGI, C_RES };
 
 enum e_client_state { CLIENT_CONNECTED, CLIENT_DISCONNECTED };
 
@@ -39,6 +39,7 @@ public:
   Cookie &cookie();
 
   int recvRequest();
+  int emptySocket();
   int readChunk();
   void handleResponse();
   void log(void) const;

@@ -20,6 +20,7 @@
 #include "HttpRedirect.hpp"
 #include "Request.hpp"
 #include "http_utils.hpp"
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -70,20 +71,46 @@ void Response::setHeader(std::string const &key, std::string const &value,
   _responseHeaders[key] = value;
 }
 
+void Response::getCgiHeaders() {
+  size_t pos = _body.rfind("\r\n");
+  if (pos == std::string::npos) {
+    setHeader("Content-Length", sizeToStr(_body.size()), true);
+    return;
+  }
+  std::string headers = _body.substr(0, pos);
+  _body = _body.substr(pos + 2);
+  setHeader("Content-Length", sizeToStr(_body.size()), true);
+  std::istringstream header_stream(headers);
+  std::string header;
+  size_t index;
+  hashmap headerMap;
+  while (std::getline(header_stream, header)) {
+    index = header.find(": ", 0);
+    if (index != std::string::npos) {
+      std::string key = trim_copy(header.substr(0, index));
+      key = formatHeader(key);
+      std::string value = trim_copy(header.substr(index + 1));
+      pos = value.find_first_of(";\r\n");
+      value = value.substr(0, pos);
+      headerMap[key] = value;
+    }
+  }
+  hashmap::const_iterator it = headerMap.begin();
+  for (; it != headerMap.end(); ++it) {
+    setHeader(it->first, it->second, true);
+  }
+}
+
 void Response::processCgi(Request &req, Client &client) {
   (void)req;
-  std::cout << "processCgi" << std::endl;
   if (_cgi.isRunning()) {
     if (_cgi.getProcessState() > 0) {
       _statusCode = _cgi.getStatus();
-      if (_statusCode == 200) {
+      if (_statusCode <= 200 && _statusCode < 300) {
         _body = _cgi.body();
-        if (_body.find("Content-Length") == _body.npos)
-          setHeader("Content-Length", sizeToStr(_body.size()), true);
-        if (_body.find("Content-Type") == _body.npos)
-          setHeader("Content-Type", "text/plain", true);
+        getCgiHeaders();
       } else {
-        setBodyError(_statusCode, errPage(client, _statusCode));
+        _body = "";
       }
       client.setState(C_RES);
     } else {
@@ -91,7 +118,10 @@ void Response::processCgi(Request &req, Client &client) {
         std::cout << "CGI TIMEOUT" << std::endl;
         _cgi.killCgi();
         _statusCode = 504;
-        setBodyError(_statusCode, errPage(client, _statusCode));
+        if (req.line().getMethod() == "GET")
+          setBodyError(_statusCode, errPage(client, _statusCode));
+        else
+          _body = "";
         client.setState(C_RES);
       }
     }
@@ -109,7 +139,7 @@ bool Response::isAutoindex(Request const &req, Configuration const &conf) {
     autoindex = l[0].get_value("autoindex");
   }
   if (autoindex.empty())
-      return false;
+    return false;
   if (autoindex[0] != "on")
     return false;
   return true;
@@ -117,19 +147,23 @@ bool Response::isAutoindex(Request const &req, Configuration const &conf) {
 
 void Response::makeAutoindex(Request const &req, Client &client) {
   _statusCode = 200;
-  try {
-    _body = HttpAutoindex::generateIndex(req, _path);
-    setHeader("Content-Length", sizeToStr(_body.size()), true);
-    setHeader("Content-Type", "text/html", true);
-  } catch (HttpAutoindex::FolderRedirect const &e) {
-    _statusCode = 301;
-    _body = "";
-    _responseHeaders.clear();
-    setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
-              true);
+  if (access(_path.c_str(), R_OK)) {
+    setBodyError(403, errPage(client, 403));
+  } else {
+    try {
+      _body = HttpAutoindex::generateIndex(req, _path);
+      setHeader("Content-Length", sizeToStr(_body.size()), true);
+      setHeader("Content-Type", "text/html", true);
+    } catch (HttpAutoindex::FolderRedirect const &e) {
+      _statusCode = 301;
+      _body = "";
+      _responseHeaders.clear();
+      setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
+                true);
 
-  } catch (HttpAutoindex::NoPathException const &e) {
-    setBodyError(404, errPage(client, 404));
+    } catch (HttpAutoindex::NoPathException const &e) {
+      setBodyError(404, errPage(client, 404));
+    }
   }
   client.setState(C_RES);
 }
@@ -145,10 +179,8 @@ void Response::processRequest(Request &req, Client &client) {
   req.checkCGI(client);
   setHeader("Set-Cookie", client.cookie().full(), true);
   _statusCode = 200;
-  if (!client.getConfig().is_a_allowed_Method(req.line().getMethod(),
-                                              req.getFilePath())) {
+  if (!conf.is_a_allowed_Method(req.line().getMethod(), req.getFilePath())) {
     _statusCode = 405;
-    logItem("is allowed", req.getFilePath());
     setBodyError(_statusCode, errPage(client, _statusCode));
     client.setState(C_RES);
     return;
@@ -156,7 +188,6 @@ void Response::processRequest(Request &req, Client &client) {
   HttpRedirect::handleRedirect(req, *this, conf);
   if (req.line().getMethod() == "GET") {
     if (isAutoindex(req, conf)) {
-      logStep("autoindex", 1);
       makeAutoindex(req, client);
       return;
     }
@@ -254,6 +285,7 @@ void Response::setDefaultHeaders() {
 }
 
 void Response::clear() {
+  _cgi = CgiHandler();
   _responseHeaders.clear();
   _statusCode = 200;
   setDefaultHeaders();

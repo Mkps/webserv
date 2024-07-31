@@ -150,7 +150,12 @@ std::vector<Location> Configuration::get_locations(void) const {
 }
 
 std::vector<Location>
-Configuration::get_locations_by_path(std::string path) const {
+Configuration::get_locations_by_path(std::string rpath) const {
+    std::string path(rpath);
+  size_t pos = path.find_last_of("/");
+  if (*path.rbegin() != '/') {
+      path = path.substr(0, pos + 1);
+  }
   std::vector<Location>::const_iterator it = this->_locations.begin();
   std::vector<Location> res = std::vector<Location>();
   for (; it != this->_locations.end(); ++it) {

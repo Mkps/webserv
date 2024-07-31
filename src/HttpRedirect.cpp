@@ -25,7 +25,6 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   std::string path = root + req.getFilePath();
   std::string redir = conf.get_redirect(req.getFilePath());
   if (!redir.empty()) {
-    logItem("redirecting to", redir);
     response._statusCode = 302;
     if (redir.find("http://") == redir.npos)
       redir = "http://" + redir;

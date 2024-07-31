@@ -64,6 +64,7 @@ public:
   void makeAutoindex(Request const &req, Client &client);
   std::string findContentType();
   void findPath(Request const &req);
+  void getCgiHeaders();
   CgiHandler cgi();
 
   friend class HttpRedirect;
