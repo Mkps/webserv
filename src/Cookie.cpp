@@ -78,9 +78,11 @@ void Cookie::insert(std::string const &key, std::string const &value) {
     if (!key.empty() && !value.empty())
         _data[key] = value;
 }
-strPair Cookie::find(std::string const &key) const{
+std::string Cookie::find(std::string const &key) const{
     hashmap::const_iterator it = _data.find(key);
-    return *it;
+    if (it == _data.end())
+        return std::string();
+    return it->second;
 }
 
 bool Cookie::exist(std::string const &key) const{
@@ -94,3 +96,18 @@ void Cookie::clear(){
     _data.clear();
 }
 
+#include <iostream>
+void Cookie::log() const {
+    hashmap::const_iterator it = _data.begin();
+    for (; it != _data.end(); ++it) {
+        std::cout << "Cookie element " << it->first << " value " << it->second << std::endl;
+    }
+
+}
+
+void Cookie::setSession(hashmap &session) const {
+    hashmap::const_iterator it = _data.begin();
+    for (; it != _data.end(); ++it) {
+       session[it->first] = it->second;
+    }
+}

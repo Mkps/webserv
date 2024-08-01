@@ -22,7 +22,11 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
     root = ".";
   if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')
     root = root.substr(0, root.size() - 1);
-  std::string path = root + req.getFilePath();
+  std::string path = req.getFilePath();
+  size_t pos = path.find_first_of("?");
+  if (pos != path.npos)
+      path = path.substr(0, pos);
+  path = root + path;
   std::string redir = conf.get_redirect(req.getFilePath());
   if (!redir.empty()) {
     response._statusCode = 302;

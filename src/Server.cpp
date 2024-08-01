@@ -164,7 +164,8 @@ int Server::_handleNewConnection(void) {
   for (size_t i = 0; i < _sockets.size(); i++) {
     if (!(_pollfds[i].revents & POLLIN))
       continue;
-    std::cout << "\tNew connection on " << *_sockets[i] << std::endl;
+    if (DEBUG)
+        std::cout << "\tNew connection on " << *_sockets[i] << std::endl;
     ptr = _createClient(_sockets[i], _config[i]);
     if (!ptr)
       return (EXIT_FAILURE);

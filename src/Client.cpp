@@ -98,11 +98,10 @@ int Client::recvRequest(void) {
 
   ret = BUFFER_SIZE;
   if (_state != C_RECV)
-      _request.clear();
+    _request.clear();
   int flags = fcntl(_fd, F_GETFL, 0);
   fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
-  if (_req.findValue("transfer-encoded") != "chunked" ||
-          _state == C_RECV) {
+  if (_req.findValue("transfer-encoded") != "chunked" || _state == C_RECV) {
     while (ret == BUFFER_SIZE) {
       ret = recv(_fd, buffer, BUFFER_SIZE, 0);
       if (ret > 0) {
@@ -117,8 +116,8 @@ int Client::recvRequest(void) {
     return (CLIENT_DISCONNECTED);
   }
   if (!_request.empty() && ret == -1) {
-      _state = C_RECV;
-      return (CLIENT_CONNECTED);
+    _state = C_RECV;
+    return (CLIENT_CONNECTED);
   }
   if (_req.findValue("transfer-encoding") == "chunked") {
     try {
@@ -141,6 +140,18 @@ int Client::recvRequest(void) {
   _cookie.import(_req.findValue("cookie"));
   if (!_cookie.exist("uuid"))
     _cookie.insert("uuid", generateUUID());
+  std::string sessionId = _cookie.find("uuid");
+  if (!sessionId.empty())
+      _sessionStore[sessionId]["uuid"] = sessionId;
+  hashmap currentSession = getSessionById(sessionId);
+  if (!currentSession.empty()) {
+      _cookie.log();
+      _cookie.setSession(currentSession);
+      hashmap::iterator it = currentSession.begin();
+      for (; it != currentSession.end(); ++it) {
+          std::cout << "cs " << it->first << " => " << it->second << std::endl;
+      }
+  }
   _state = C_REQ;
   return (CLIENT_CONNECTED);
 }
@@ -182,15 +193,15 @@ int Client::emptySocket() {
 void Client::handleResponse() {
   if (_state == C_CGI) {
     _res.processCgi(_req, *this);
-    return ;
+    return;
   } else if (_state == C_REQ) {
     _res.processRequest(_req, *this);
-    return ;
+    return;
   }
   if (_state == C_RES) {
     if (emptySocket()) {
-        _res.setStatusCode(500);
-        _res.setBodyError(500, errPage(*this, 500));
+      _res.setStatusCode(500);
+      _res.setBodyError(500, errPage(*this, 500));
     }
     _res.sendResponse(_fd);
     _res.clear();
@@ -232,3 +243,19 @@ void Client::setConfig(std::vector<Configuration> const &conf) {
 }
 
 int Client::dataFd() { return _res.cgi().getFd(); }
+
+hashmap Client::getSessionById(std::string const &sessionId) const {
+    std::map<std::string, hashmap>::const_iterator it = _sessionStore.find(sessionId);
+    if (it != _sessionStore.end())
+        return  it->second;
+    return hashmap();
+}
+
+void Client::setSessionValueById(
+    std::string const &sessionId,
+    std::pair<std::string, std::string> const &value) {
+    hashmap tmp = getSessionById(sessionId);
+    if (tmp.empty())
+        return ;
+    tmp[value.first] = value.second;
+}

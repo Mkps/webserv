@@ -37,7 +37,9 @@ public:
   void setUuid(std::string const &uuid);
   void setConfig(std::vector<Configuration> const &conf);
   Cookie &cookie();
-
+  hashmap getSessionById(std::string const &sessionId) const;
+  void setSessionValueById(std::string const &sessionId,
+                           std::pair<std::string, std::string> const &value);
   int recvRequest();
   int emptySocket();
   int readChunk();
@@ -56,6 +58,7 @@ private:
   std::string _request;
   std::string _serverName;
   Cookie _cookie;
+  std::map<std::string, hashmap> _sessionStore;
   Configuration _config;
 };
 
