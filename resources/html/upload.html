@@ -26,29 +26,22 @@
       </nav>
     </header>
     <hr />
-    <div class="img-container">
-      <img src="network.jpg" alt="My photo" />
-      <div class="text">
-        <h2>A bit about webserv</h2>
-        <p>A simple webserv using poll().</p>
-      </div>
+    <section class="page-title">
+        <h1><strong>Upload</strong></h1>
+        <p>A test for file upload</p>
+      </section>
+      <hr />
+    <div class="container">
+      <h1>Upload a File</h1>
+      <form id="uploadForm">
+        <input type="file" id="fileInput" name="file" />
+        <button type="submit">Upload</button>
+      </form>
+      <div id="result"></div>
+      <a href="upload/">Upload Folder</a>
     </div>
-    <div class="cta">
-      <h2>A solid http server</h2>
-      <p>
-        See what content the webserv can deliver -
-        <a href="content.html">discover now</a>!
-      </p>
-      <h2>What is it?</h2>
-      <p>
-        A simple static website made with html and css as a learning project
-      </p>
-      <h2>Who made it?</h2>
-      <p>
-        Made by <em>obouhlel aloubier yzaoui</em> <br />
-        Learn more <a href="about.html">About it</a>
-      </p>
-    </div>
+
+    <script src="script.js"></script>
     <hr />
     <footer class="footer">
       <div>

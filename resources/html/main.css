@@ -274,7 +274,31 @@ body {
   font-weight: normal;
   cursor: pointer;
 }
+.cookieDisplay {
+  display: block;
+  width: 80%;
+  margin: 20px auto;
+  padding: 20px;
+  padding: 12px;
+  font-size: 20px;
+  text-transform: capitalize;
+}
+.cookieDisplay h2 {
+  margin: 0;
+}
 
+.cookieDisplay button {
+  margin: 4px 2px;
+  margin-top: 1%;
+  margin-left: 5%;
+  font-size: 0.8em;
+  padding: 6px 12px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: normal;
+  cursor: pointer;
+}
 .post-php {
   display: block;
   width: 66%;
@@ -310,7 +334,6 @@ body {
 
 .post-php label {
   display: inline-block;
-  float: left;
   clear: left;
   width: 250px;
   text-align: right;
@@ -354,6 +377,39 @@ body {
 .result:empty {
   display: none;
 }
+
+.container {
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.container h1 {
+  margin-bottom: 20px;
+}
+
+.container input[type="file"] {
+  margin-bottom: 20px;
+}
+
+.container button {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.container button:hover {
+  background-color: #218838;
+}
+
+.container #result {
+  margin-top: 20px;
+}
+
 @media (max-width: 600px) {
   .img-container {
     flex-direction: column;
