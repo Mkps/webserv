@@ -6,14 +6,13 @@
 /*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/17 14:51:09 by aloubier          #+#    #+#             */
-/*   Updated: 2024/06/17 14:51:09 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/08/01 18:44:39 by aloubier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Request.hpp"
 #include "Client.hpp"
 #include "http_utils.hpp"
-
 #include <algorithm>
 #include <iostream>
 #include <sstream>

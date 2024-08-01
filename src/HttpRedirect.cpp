@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   HttpRedirect.cpp                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/08/01 18:43:58 by aloubier          #+#    #+#             */
+/*   Updated: 2024/08/01 18:44:00 by aloubier         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "HttpRedirect.hpp"
 #include "Configuration.hpp"
 #include "Request.hpp"
@@ -24,8 +36,11 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
     root = root.substr(0, root.size() - 1);
   std::string path = req.getFilePath();
   size_t pos = path.find_first_of("?");
-  if (pos != path.npos)
+  std::string query_data;
+  if (pos != path.npos) {
+      query_data = path.substr(pos + 1);
       path = path.substr(0, pos);
+  }
   path = root + path;
   std::string redir = conf.get_redirect(req.getFilePath());
   if (!redir.empty()) {
@@ -46,6 +61,8 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
     tryFiles = lv[0].get_value("index");
   }
   if (fileStatus(path) == FILE_REG) {
+    if (!query_data.empty())
+        path = path + query_data;
     response._path = std::string(path);
     return;
   }
@@ -56,9 +73,9 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
       if (fileStatus(filePath) == FILE_REG) {
         response._statusCode = 200;
         response._path = std::string(filePath);
+        }
         return;
       }
-    }
   } else if (fileStatus(path) == FILE_NOT) {
     response._statusCode = 404;
   }
