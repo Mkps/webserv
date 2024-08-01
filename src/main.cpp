@@ -17,7 +17,7 @@
 #include <stdexcept>
 
 // Function to check if a path is a directory
-bool isDirectory(const std::string& path) {
+bool isDirectory(const std::string &path) {
   struct stat info;
   if (stat(path.c_str(), &info) != 0) {
     return false;
@@ -26,26 +26,25 @@ bool isDirectory(const std::string& path) {
 }
 
 // Function to check if a path is a file
-bool isFile(const std::string& path) {
+bool isFile(const std::string &path) {
   struct stat info;
   if (stat(path.c_str(), &info) != 0) {
     return false;
   }
   return (info.st_mode & S_IFREG) != 0;
 }
-int main(int ac, char **av)
-{
+int main(int ac, char **av) {
   const std::string defaultfile = "configurations/minimal.config";
-  //try {
+  try {
     std::string fileConfig = defaultfile;
     if (ac > 2 || ac < 2)
       throw std::invalid_argument("Incorrect argument count.");
-    else
-    {
+    else {
       if (isFile(av[1]))
         fileConfig = av[1];
       else if (!isDirectory(av[1]))
-        throw std::invalid_argument("Incorrect argument it's not a Directory and not a File.");
+        throw std::invalid_argument(
+            "Incorrect argument it's not a Directory and not a File.");
     }
     std::vector<Configuration> ConfigurationForAllServ = getAllConf(fileConfig);
     for (std::vector<Configuration>::iterator it =
@@ -57,9 +56,9 @@ int main(int ac, char **av)
     Server *server = new Server(ConfigurationForAllServ);
     server->run();
     delete server;
-  /*} catch (const std::exception &e) {*/
-  /*  std::cerr << RED "Error: " NOCOLOR << e.what() << '\n';*/
-  /*  return (1);*/
-  /*}*/
+  } catch (const std::exception &e) {
+    std::cerr << RED "Error: " NOCOLOR << e.what() << '\n';
+    return (1);
+  }
   return 0;
 }

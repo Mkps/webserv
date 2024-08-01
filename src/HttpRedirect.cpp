@@ -38,8 +38,8 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   size_t pos = path.find_first_of("?");
   std::string query_data;
   if (pos != path.npos) {
-      query_data = path.substr(pos + 1);
-      path = path.substr(0, pos);
+    query_data = path.substr(pos);
+    path = path.substr(0, pos);
   }
   path = root + path;
   std::string redir = conf.get_redirect(req.getFilePath());
@@ -51,10 +51,13 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
     return;
   }
   response._path = path;
-  if (req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR)
+  if ((req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR) ||
+      req.isCGI()) {
+    if (!query_data.empty())
+      path = path + query_data;
+    response._path = std::string(path);
     return;
-  if (req.isCGI())
-    return;
+  }
   std::vector<Location> lv = conf.get_locations_by_path(req.getFilePath());
   std::vector<std::string> tryFiles;
   if (!lv.empty()) {
@@ -62,7 +65,7 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   }
   if (fileStatus(path) == FILE_REG) {
     if (!query_data.empty())
-        path = path + query_data;
+      path = path + query_data;
     response._path = std::string(path);
     return;
   }
@@ -73,9 +76,9 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
       if (fileStatus(filePath) == FILE_REG) {
         response._statusCode = 200;
         response._path = std::string(filePath);
-        }
-        return;
       }
+      return;
+    }
   } else if (fileStatus(path) == FILE_NOT) {
     response._statusCode = 404;
   }

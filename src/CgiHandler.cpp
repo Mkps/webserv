@@ -265,14 +265,12 @@ void CgiHandler::_execCGIPost() {
   _err = 1;
   throw std::runtime_error("500 execve error");
 }
-int CgiHandler::handlePost() {
 
+int CgiHandler::handlePost() {
   if (pipe(_pipefd)) {
     std::cerr << "Pipe failed" << std::endl;
     return 500;
   }
-  int fdin = dup(STDIN_FILENO);
-  int fdout = dup(STDOUT_FILENO);
   gettimeofday(&_startTime, NULL);
   _pid = fork();
   if (_pid < 0) {
@@ -301,8 +299,6 @@ int CgiHandler::handlePost() {
     _body = "";
     _isRunning = true;
     int child_status = waitpid(_pid, &_status, WNOHANG | WUNTRACED);
-    dup2(fdin, STDIN_FILENO);
-    dup2(fdout, STDIN_FILENO);
     if (child_status == -1) {
       _isRunning = false;
       return 500;
