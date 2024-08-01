@@ -145,12 +145,8 @@ int Client::recvRequest(void) {
       _sessionStore[sessionId]["uuid"] = sessionId;
   hashmap currentSession = getSessionById(sessionId);
   if (!currentSession.empty()) {
-      _cookie.log();
+      //_cookie.log();
       _cookie.setSession(currentSession);
-      hashmap::iterator it = currentSession.begin();
-      for (; it != currentSession.end(); ++it) {
-          std::cout << "cs " << it->first << " => " << it->second << std::endl;
-      }
   }
   _state = C_REQ;
   return (CLIENT_CONNECTED);
