@@ -34,7 +34,7 @@ Cookie &Cookie::operator=(Cookie const &rhs){
 bool Cookie::empty() const {
     return _data.empty();
 }
-#include <iostream>
+//#include <iostream>
 //returns the full cookieheader value as a string
 std::string Cookie::full() const {
     std::string tmp;
@@ -46,7 +46,7 @@ std::string Cookie::full() const {
     size_t pos = tmp.find_last_of(";");
     if (pos != tmp.npos)
         tmp = tmp.substr(0, pos);
-    std::cout << "Cookies are " << tmp << std::endl;
+    //std::cout << "Cookies are " << tmp << std::endl;
     return tmp;
 }
 
@@ -78,9 +78,11 @@ void Cookie::insert(std::string const &key, std::string const &value) {
     if (!key.empty() && !value.empty())
         _data[key] = value;
 }
-strPair Cookie::find(std::string const &key) const{
+std::string Cookie::find(std::string const &key) const{
     hashmap::const_iterator it = _data.find(key);
-    return *it;
+    if (it == _data.end())
+        return std::string();
+    return it->second;
 }
 
 bool Cookie::exist(std::string const &key) const{
@@ -94,3 +96,18 @@ void Cookie::clear(){
     _data.clear();
 }
 
+#include <iostream>
+void Cookie::log() const {
+    hashmap::const_iterator it = _data.begin();
+    for (; it != _data.end(); ++it) {
+        std::cout << "Cookie element " << it->first << " value " << it->second << std::endl;
+    }
+
+}
+
+void Cookie::setSession(hashmap &session) const {
+    hashmap::const_iterator it = _data.begin();
+    for (; it != _data.end(); ++it) {
+       session[it->first] = it->second;
+    }
+}

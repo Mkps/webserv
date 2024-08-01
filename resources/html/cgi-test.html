@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="author" content="aloubier" />
+    <meta name="description" content="Learn more about me!" />
+    <title>CGI - 42 Projects</title>
+    <link rel="icon" href="42_Logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="main.css" type="text/css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="name">
+        <a href="index.html">webserv</a>
+        <p>@42Paris Project</p>
+      </div>
+      <nav class="nav-links">
+        <ul>
+          <li><a href="session.html">Session</a></li>
+          <li><a href="upload.html">Upload</a></li>
+          <li><a href="content.html">Content</a></li>
+          <li><a href="cgi-test.html">CGI</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+    </header>
+    <hr />
+    <section class="page-title">
+      <h1><strong>CGI tests</strong></h1>
+      <p>Here are some tests for webserv handling of cgi</p>
+    </section>
+    <hr />
+    <section>
+      <div class="projects">
+        <h2>Fibonacci generator PHP Test</h2>
+        <section class="contact">
+          <form id="fibonacciForm">
+            <fieldset>
+              <legend>Fibonacci Number</legend>
+              <div>
+                <label for="firstName">Number:</label>
+                <input
+                  type="text"
+                  name="number"
+                  id="number"
+                  placeholder="Enter number here"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit">Submit</button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resFibonacci"></div>
+        <script src="fibonacci.js"></script>
+        <h2>Base64 converter python Test</h2>
+        <section class="contact">
+          <form id="base64Form">
+            <fieldset>
+              <legend>Base64 Encode/Decode</legend>
+              <div>
+                <label for="firstName">Number:</label>
+                <input
+                  type="text"
+                  name="string"
+                  id="string"
+                  placeholder="Enter your string here"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="button" onclick="submitForm('encode')">
+                Encode
+              </button>
+              <button type="button" onclick="submitForm('decode')">
+                Decode
+              </button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resBase64"></div>
+        <script src="base64.js"></script>
+        <h2>Post Python Test</h2>
+        <section class="contact">
+          <form id="postFormPy">
+            <fieldset>
+              <legend>Post Python Test</legend>
+              <div>
+                <label for="firstName">First Name:</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  id="firstName"
+                  placeholder="First Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="lastName">Last Name:</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  id="lastName"
+                  placeholder="Last Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="mailAddress">Mail address</label>
+                <input
+                  type="text"
+                  name="mailAddress"
+                  id="mailAddress"
+                  placeholder="address@example.com"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit">Submit</button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resPostPy"></div>
+        <h2>Get Python Test</h2>
+        <section class="contact">
+          <form id="getFormPy">
+            <fieldset>
+              <legend>Get Python Test</legend>
+              <div>
+                <label for="firstName">First Name:</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  id="firstName"
+                  placeholder="First Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="lastName">Last Name:</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  id="lastName"
+                  placeholder="Last Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="mailAddress">Mail address</label>
+                <input
+                  type="text"
+                  name="mailAddress"
+                  id="mailAddress"
+                  placeholder="address@example.com"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit">Submit</button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resGetPy"></div>
+        <script src="pythonscript.js"></script>
+        <h2>Post PHP Test</h2>
+        <section class="contact">
+          <form id="postFormPHP">
+            <fieldset>
+              <legend>Post PHP Test</legend>
+              <div>
+                <label for="firstName">First Name:</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  id="firstName"
+                  placeholder="First Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="lastName">Last Name:</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  id="lastName"
+                  placeholder="Last Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="mailAddress">Mail address</label>
+                <input
+                  type="text"
+                  name="mailAddress"
+                  id="mailAddress"
+                  placeholder="address@example.com"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit">Submit</button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resPostPHP"></div>
+        <h2>Get PHP Test</h2>
+        <section class="contact">
+          <form id="getFormPHP">
+            <fieldset>
+              <legend>Get PHP Test</legend>
+              <div>
+                <label for="firstName">First Name:</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  id="firstName"
+                  placeholder="First Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="lastName">Last Name:</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  id="lastName"
+                  placeholder="Last Name"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div>
+                <label for="mailAddress">Mail address</label>
+                <input
+                  type="text"
+                  name="mailAddress"
+                  id="mailAddress"
+                  placeholder="address@example.com"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit">Submit</button>
+            </fieldset>
+          </form>
+        </section>
+        <div class="result" id="resGetPHP"></div>
+        <script src="phpscript.js"></script>
+      </div>
+    </section>
+    <hr />
+    <footer class="footer">
+      <div>
+        <p>Project</p>
+        <p class="link">webserv</p>
+      </div>
+      <div>
+        <p>Intra</p>
+        <a class="link" href="https://profile.intra.42.fr/">42 intra</a>
+      </div>
+      <div>
+        <p>Github</p>
+        <a class="link" href="https://github.com/mkps/webserv/"
+          >webserv @github.com</a
+        >
+      </div>
+      <div>
+        <p>&copy;&nbsp;Made by obouhlel & aloubier & yzaoui</p>
+      </div>
+    </footer>
+  </body>
+</html>

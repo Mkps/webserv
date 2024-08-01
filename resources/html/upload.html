@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="author" content="aloubier" />
+    <meta name="description" content="webserv" />
+    <title>webserv - 42Paris</title>
+    <link rel="icon" href="42_Logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="main.css" type="text/css" />
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="name">
+        <a href="index.html">webserv</a>
+        <p>@42Paris Project</p>
+      </div>
+      <nav class="nav-links">
+        <ul>
+          <li><a href="session.html">Session</a></li>
+          <li><a href="upload.html">Upload</a></li>
+          <li><a href="content.html">Content</a></li>
+          <li><a href="cgi-test.html">CGI</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+    </header>
+    <hr />
+    <section class="page-title">
+        <h1><strong>Upload</strong></h1>
+        <p>A test for file upload</p>
+      </section>
+      <hr />
+    <div class="container">
+      <h1>Upload a File</h1>
+      <form id="uploadForm">
+        <input type="file" id="fileInput" name="file" />
+        <button type="submit">Upload</button>
+      </form>
+      <div id="result"></div>
+      <a href="upload/">Upload Folder</a>
+    </div>
+
+    <script src="script.js"></script>
+    <hr />
+    <footer class="footer">
+      <div>
+        <p>Project</p>
+        <p class="link">webserv</p>
+      </div>
+      <div>
+        <p>Intra</p>
+        <a class="link" href="https://profile.intra.42.fr/">42 intra</a>
+      </div>
+      <div>
+        <p>Github</p>
+        <a class="link" href="https://github.com/mkps/webserv/"
+          >webserv @github.com</a
+        >
+      </div>
+      <div>
+        <p>&copy;&nbsp;Made by obouhlel & aloubier & yzaoui</p>
+      </div>
+    </footer>
+  </body>
+</html>

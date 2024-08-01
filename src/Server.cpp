@@ -13,6 +13,7 @@
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Socket.hpp"
+#include "http_utils.hpp"
 #include <exception>
 #include <iostream>
 #include <poll.h>
@@ -24,10 +25,7 @@
 Server *Server::_instance = NULL;
 size_t Server::_nbrOFServ = 1;
 
-Server::Server(std::string config)
-    : _id(Server::_nbrOFServ) //,
-// _config(config, this->_id)
-{
+Server::Server(std::string config) : _id(Server::_nbrOFServ) {
   (void)config;
   _continue = 1;
   Server::_nbrOFServ++;
@@ -61,7 +59,7 @@ Server::Server(std::vector<Configuration> const &vConf) : _id(vConf.size()) {
     else
       port = strtod(vConf[i].get_value("listen")[0].c_str(), NULL);
     if (!socketExists(host, port))
-        ptr = _createSocket(host, port);
+      ptr = _createSocket(host, port);
     if (!ptr) {
       throw std::runtime_error("Failed to create socket");
     }
@@ -82,12 +80,11 @@ Server::~Server(void) {
 }
 
 bool Server::socketExists(std::string host, int port) const {
-    for (size_t i = 0; i < _sockets.size(); ++i) {
-        if (_sockets[i]->getIp() == host && _sockets[i]->getPort() == port)
-            return true;
-
-    }
-    return false;
+  for (size_t i = 0; i < _sockets.size(); ++i) {
+    if (_sockets[i]->getIp() == host && _sockets[i]->getPort() == port)
+      return true;
+  }
+  return false;
 }
 std::vector<s_pollfd> Server::getPollfds() const { return _pollfds; }
 
@@ -167,7 +164,8 @@ int Server::_handleNewConnection(void) {
   for (size_t i = 0; i < _sockets.size(); i++) {
     if (!(_pollfds[i].revents & POLLIN))
       continue;
-    std::cout << "\tNew connection on " << *_sockets[i] << std::endl;
+    if (DEBUG)
+        std::cout << "\tNew connection on " << *_sockets[i] << std::endl;
     ptr = _createClient(_sockets[i], _config[i]);
     if (!ptr)
       return (EXIT_FAILURE);
@@ -189,7 +187,7 @@ int Server::_handleClientsEvent(void) {
       return (EXIT_FAILURE);
     }
     Client *client = static_cast<Client *>(ptr);
-    if (client->getState() == C_OFF) {
+    if (client->getState() == C_OFF || client->getState() == C_RECV) {
       ret = _handleClientRequest(client);
       if (ret == CLIENT_DISCONNECTED)
         continue;
@@ -199,8 +197,10 @@ int Server::_handleClientsEvent(void) {
       client->setState(C_OFF);
       continue;
     }
+    if (client->getState() == C_RECV) {
+      continue;
+    }
     client->handleResponse();
-    std::cout << "response handled" << std::endl;
   }
   return (EXIT_SUCCESS);
 }
@@ -209,16 +209,16 @@ int Server::_handleClientRequest(Client *client) {
   int ret = 0;
 
   ret = client->recvRequest();
+  if (client->getState() == C_RECV) {
+    return CLIENT_DISCONNECTED;
+  }
   if (ret == CLIENT_DISCONNECTED) {
-    std::cout << "Client disconnected : " << *client << std::endl;
+    if (DEBUG)
+      std::cout << "Client disconnected : " << *client << std::endl;
     _deleteClient(client);
     return ret;
   }
   client->setConfig(_config);
-  std::cout << "client after setConfig " << *client << std::endl;
-  std::cout << "client root " << client->getConfig().get_value("root")[0] << std::endl;
-  // client->log();
-  //std::cout << "Request received from " << *client << std::endl;
   return (ret);
 }
 
@@ -226,18 +226,16 @@ int Server::_handleTimeout() {
   for (size_t i = 0; i < _clients.size(); ++i) {
     int state = _clients[i]->getState();
     if (state == C_CGI) {
-      std::cerr << "Found cgi on client " << i << std::endl;
       _clients[i]->checkCgi();
     }
   }
   return 0;
 }
+
 int Server::_handleSend() {
   for (size_t i = 0; i < _clients.size(); ++i) {
     int state = _clients[i]->getState();
-    //std::cout << "client " << i << " " <<*_clients[i] << std::endl;
     if (state == C_RES) {
-      //std::cerr << "Found ready response on client " << i << std::endl;
       _clients[i]->handleResponse();
     }
   }
@@ -248,7 +246,7 @@ void Server::_handleClientResponse(Client *client) { client->handleResponse(); }
 
 void Server::run() {
   int ret = 0;
-  int timeout = 0;
+  int timeout = 500;
 
   _instance = this;
   signal(SIGINT, Server::signalHandler);
@@ -266,9 +264,11 @@ void Server::run() {
       else if (ret == NEW_CLIENT_CONNECTED)
         continue;
     }
-    if (_handleClientsEvent() == EXIT_FAILURE)
+    if (_handleClientsEvent() == EXIT_FAILURE) {
       break;
-    if (_handleSend() == EXIT_FAILURE)
+    }
+    if (_handleSend() == EXIT_FAILURE) {
       break;
+    }
   }
 }

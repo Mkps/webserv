@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="author" content="aloubier" />
+    <meta name="description" content="webserv" />
+    <title>webserv - 42Paris</title>
+    <link rel="icon" href="42_Logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="main.css" type="text/css" />
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="name">
+        <a href="index.html">webserv</a>
+        <p>@42Paris Project</p>
+      </div>
+      <nav class="nav-links">
+        <ul>
+          <li><a href="session.html">Session</a></li>
+          <li><a href="upload.html">Upload</a></li>
+          <li><a href="content.html">Content</a></li>
+          <li><a href="cgi-test.html">CGI</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+    </header>
+    <hr />
+    <section class="page-title">
+      <h1><strong>Cookie and Session Handling</strong></h1>
+      <p>A short example of working session and cookie handling</p>
+    </section>
+    <hr />
+    <div class="projects">
+      <h2>Set username</h2>
+      <section class="contact">
+        <form id="usernameForm">
+          <fieldset>
+            <legend>Username here</legend>
+            <div>
+              <label for="username">User:</label>
+              <input
+                type="text"
+                name="username"
+                id="username"
+                placeholder="Enter username here"
+                autocomplete="off"
+                required
+              />
+            </div>
+            <button type="submit">Submit</button>
+          </fieldset>
+          <div id="cookieStatus"></div>
+        </form>
+      </section>
+      <div class="cookieDisplay">
+        <h2>Display cookies</h2>
+        <button id="getCookieButton">Show current Cookie</button>
+        <div id="showCookies"></div>
+      </div>
+    </div>
+    <hr />
+    <footer class="footer">
+      <div>
+        <p>Project</p>
+        <p class="link">webserv</p>
+      </div>
+      <div>
+        <p>Intra</p>
+        <a class="link" href="https://profile.intra.42.fr/">42 intra</a>
+      </div>
+      <div>
+        <p>Github</p>
+        <a class="link" href="https://github.com/mkps/webserv/"
+          >webserv @github.com</a
+        >
+      </div>
+      <div>
+        <p>&copy;&nbsp;Made by obouhlel & aloubier & yzaoui</p>
+      </div>
+    </footer>
+    <script>
+      function setCookie(name, value, days) {
+        let expires = "";
+        if (days) {
+          const date = new Date();
+          date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+          expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/";
+      }
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return null;
+      }
+
+      function showCookies() {
+        const cookies = document.cookie;
+        const cookieDisplayDiv = document.getElementById("showCookies");
+        if (cookies) {
+          const cookieList = cookies
+            .split(";")
+            .map((cookie) => {
+              return "<li>" + cookie.trim() + "</li>";
+            })
+            .join("");
+          cookieDisplayDiv.innerHTML = "<ul>" + cookieList + "</ul>";
+        } else {
+          cookieDisplayDiv.textContent = "No cookies found";
+        }
+      }
+
+      document
+        .getElementById("getCookieButton")
+        .addEventListener("click", showCookies);
+      document
+        .getElementById("usernameForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault(); // Prevent the default form submission
+
+          // Get form data
+          const formData = new FormData(this);
+          const username = formData.get("username");
+          setCookie("username", username);
+          document.getElementById("cookieStatus").innerHTML =
+            'Cookie "username" set to ' + username;
+        });
+    </script>
+  </body>
+</html>

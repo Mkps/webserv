@@ -3,7 +3,7 @@
 
 #include <string>
 
-#define DEBUG 1
+#define DEBUG 0
 
 class Client;
 enum e_fileStatus{FILE_REG = 0, FILE_DIR, FILE_NOT, FILE_ELS};
@@ -24,5 +24,7 @@ void logItem(std::string const &s, int const &item) ;
 int logError(std::string const &s, int const &status) ;
 std::string errPage(Client &client, size_t error_code);
 std::string getResponse(short status);
+std::string trim_copy(std::string s) ;
+std::string formatHeader(const std::string& input);
 
 #endif

@@ -51,5 +51,6 @@ public:
   std::string findValue(std::string const &value) const;
   void unchunkRequest(void);
   void trimBody();
+  void clear();
 };
 #endif

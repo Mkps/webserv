@@ -15,8 +15,8 @@
 
 #include <map>
 #include <string>
-#include <sys/types.h>
 #include <sys/time.h>
+#include <sys/types.h>
 
 #define CGI_TIMEOUT 3
 
@@ -25,6 +25,7 @@ typedef struct timeval timeval_t;
 class CgiHandler {
 private:
   hashmap _data;
+  hashmap _env;
   char **_envv;
   int _pipefd[2];
   pid_t _pid;
@@ -36,9 +37,10 @@ private:
   std::string _body;
   std::string _requestBody;
   bool _isRunning;
+  int _err;
 
-  hashmap _setEnvGet(const std::string &script, const std::string &query);
-  hashmap _setEnvPost(const std::string &script, const std::string &query);
+  void _setEnvGet(const std::string &script, const std::string &query);
+  void _setEnvPost(const std::string &script, const std::string &query);
   void _execCGIGet();
   void _execCGIPost();
   void freeEnvv();
@@ -54,16 +56,19 @@ public:
   int handleGet();
   int handlePost();
 
-  std::string const &body() const;
+  void setHeaders(hashmap const &requestHeaders);
   void setRequestBody(std::string const &requestbody);
   void setScript(std::string const &script);
   void setCgiBin(std::string const &cgiBin);
   void setQueryData(std::string const &qData);
+
+  int getFd();
+  std::string const &body() const;
+
   bool isRunning();
   int getProcessState();
   int getStatus();
   int timeout();
-  int getFd();
   void killCgi();
 };
 char **hashmapToChrArray(hashmap const &map);

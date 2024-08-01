@@ -11,16 +11,21 @@ document.getElementById('uploadForm').addEventListener('submit', function(event)
     var formData = new FormData();
     formData.append('file', file);
 
-    fetch('http://localhost:8081/upload', {
+    fetch('http://localhost:8080/upload', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
     .then(data => {
-        document.getElementById('result').innerText = 'File uploaded successfully: ' + data;
+        document.getElementById('result').innerHTML = 'File uploaded successfully';
     })
     .catch(error => {
-        document.getElementById('result').innerText = 'Error uploading file: ' + error;
+        document.getElementById('result').innerHTML = 'Error uploading file: ' + error;
     });
 });
 

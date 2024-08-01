@@ -2,16 +2,16 @@
 #define CLIENT_HPP
 
 #include "Configuration.hpp"
+#include "Cookie.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
-#include "Cookie.hpp"
 #include <iostream>
 
 class Socket;
 
 #define BUFFER_SIZE 1024
 
-enum e_reqest_state { C_OFF, C_REQ, C_CGI, C_RES };
+enum e_reqest_state { C_OFF, C_RECV, C_REQ, C_CGI, C_RES };
 
 enum e_client_state { CLIENT_CONNECTED, CLIENT_DISCONNECTED };
 
@@ -37,8 +37,11 @@ public:
   void setUuid(std::string const &uuid);
   void setConfig(std::vector<Configuration> const &conf);
   Cookie &cookie();
-
+  hashmap getSessionById(std::string const &sessionId) const;
+  void setSessionValueById(std::string const &sessionId,
+                           std::pair<std::string, std::string> const &value);
   int recvRequest();
+  int emptySocket();
   int readChunk();
   void handleResponse();
   void log(void) const;
@@ -55,6 +58,7 @@ private:
   std::string _request;
   std::string _serverName;
   Cookie _cookie;
+  std::map<std::string, hashmap> _sessionStore;
   Configuration _config;
 };
 

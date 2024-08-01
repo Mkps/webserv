@@ -1,4 +1,5 @@
 #include "RequestLine.hpp"
+#include "http_utils.hpp"
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -61,15 +62,19 @@ bool RequestLine::isVersionValid() const {
   return true;
 }
 
-inline bool validUriChar(char c) {
-  if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~' || c == '/')
+inline bool validUriChar(char *c) {
+  if (isalnum(*c) || *c == '-' || *c == '.' || *c == '_' || *c == '~' || *c == '/'
+          || *c == '=' || *c == '?' || *c == '&')
     return true;
+  if (*c == '%' && isdigit(*(c + 1)) && isdigit(*(c + 2))) {
+      return true;
+  }
   return false;
 }
+
 bool RequestLine::isURIValid() const {
-  std::cout << "_rUri " << _requestUri << std::endl;
   for (size_t i = 0; i < _requestUri.size(); ++i) {
-      if (!validUriChar(_requestUri[i]))
+      if (!validUriChar((char *)_requestUri.c_str() + i))
               return false;
   }
   return true;

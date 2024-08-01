@@ -2,9 +2,11 @@
 #include "CgiHandler.hpp"
 #include "Configuration.hpp"
 #include "Socket.hpp"
+#include "http_utils.hpp"
 #include <arpa/inet.h>
 #include <cstring>
 #include <exception>
+#include <fcntl.h>
 #include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -27,7 +29,8 @@ Client::Client(Socket *socket, size_t id, Configuration config)
   }
   _ip = ip;
   _state = C_OFF;
-  std::cout << "Client connected : " << *this << std::endl;
+  if (DEBUG)
+    std::cout << "Client connected : " << *this << std::endl;
 }
 
 Client::~Client(void) { close(_fd); }
@@ -56,7 +59,6 @@ void Client::clearRequest(void) { _request.clear(); }
 std::string generateUUID() {
   char uuid[37]; // UUID is 36 characters plus null terminator
   const char *hex_chars = "0123456789abcdef";
-
   srand((unsigned)time(0));
 
   for (int i = 0; i < 8; ++i) {
@@ -95,19 +97,28 @@ int Client::recvRequest(void) {
   int ret;
 
   ret = BUFFER_SIZE;
-  _request.clear();
-  if (_req.findValue("transfer-encoded") != "chunked") {
+  if (_state != C_RECV)
+    _request.clear();
+  int flags = fcntl(_fd, F_GETFL, 0);
+  fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+  if (_req.findValue("transfer-encoded") != "chunked" || _state == C_RECV) {
     while (ret == BUFFER_SIZE) {
       ret = recv(_fd, buffer, BUFFER_SIZE, 0);
-      if (ret <= 0) {
-        return (CLIENT_DISCONNECTED);
-      } else {
+      if (ret > 0) {
         _request.append(buffer, ret);
         bzero(buffer, sizeof(buffer));
       }
     }
   }
-  _req.setRequest(_request);
+  fcntl(_fd, F_SETFL, flags);
+  if (_request.empty()) {
+    _state = C_OFF;
+    return (CLIENT_DISCONNECTED);
+  }
+  if (!_request.empty() && ret == -1) {
+    _state = C_RECV;
+    return (CLIENT_CONNECTED);
+  }
   if (_req.findValue("transfer-encoding") == "chunked") {
     try {
       _req.unchunkRequest();
@@ -118,6 +129,7 @@ int Client::recvRequest(void) {
       return (CLIENT_CONNECTED);
     }
   }
+  _req.setRequest(_request);
   std::string tmp = _req.findValue("host");
   _serverName = tmp;
   if (!tmp.empty()) {
@@ -128,6 +140,14 @@ int Client::recvRequest(void) {
   _cookie.import(_req.findValue("cookie"));
   if (!_cookie.exist("uuid"))
     _cookie.insert("uuid", generateUUID());
+  std::string sessionId = _cookie.find("uuid");
+  if (!sessionId.empty())
+      _sessionStore[sessionId]["uuid"] = sessionId;
+  hashmap currentSession = getSessionById(sessionId);
+  if (!currentSession.empty()) {
+      //_cookie.log();
+      _cookie.setSession(currentSession);
+  }
   _state = C_REQ;
   return (CLIENT_CONNECTED);
 }
@@ -153,20 +173,35 @@ void Client::checkCgi() {
     _res.processCgi(_req, *this);
 }
 
+int Client::emptySocket() {
+  char buffer[1024];
+  int bytesRead;
+  int bytesLeftover = 0;
+  int flags = fcntl(_fd, F_GETFL, 0);
+  fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+  while ((bytesRead = recv(_fd, buffer, sizeof(buffer), 0)) > 0) {
+    bytesLeftover += bytesRead;
+  }
+  fcntl(_fd, F_SETFL, flags);
+  return bytesLeftover;
+}
+
 void Client::handleResponse() {
   if (_state == C_CGI) {
     _res.processCgi(_req, *this);
-    std::cout << "HR CGI" << std::endl;
     return;
   } else if (_state == C_REQ) {
     _res.processRequest(_req, *this);
-    std::cout << "HR REQ" << std::endl;
     return;
   }
   if (_state == C_RES) {
+    if (emptySocket()) {
+      _res.setStatusCode(500);
+      _res.setBodyError(500, errPage(*this, 500));
+    }
     _res.sendResponse(_fd);
     _res.clear();
-    std::cout << "HR RES" << std::endl;
+    _req.clear();
     setState(C_OFF);
   }
   return;
@@ -188,16 +223,11 @@ void Client::setConfig(std::vector<Configuration> const &conf) {
         strtod(conf[i].get_value("listen")[0].c_str(), NULL) ==
             this->_socket->getPort()) {
       if (!first) {
-        std::cout << "found first " << _socket->getIp() << " p "
-                  << _socket->getPort() << std::endl;
         first = &conf[i];
       }
       std::vector<std::string> tmp = conf[i].get_value("server_name");
       if (!tmp.empty() && tmp[0] == host) {
-        std::cout << "set config for client serving " << host << std::endl;
         this->_serverName = host;
-        std::cout << "conf root before " << conf[i].get_value("root")[0]
-                  << std::endl;
         this->_config = conf[i];
         return;
       }
@@ -209,3 +239,19 @@ void Client::setConfig(std::vector<Configuration> const &conf) {
 }
 
 int Client::dataFd() { return _res.cgi().getFd(); }
+
+hashmap Client::getSessionById(std::string const &sessionId) const {
+    std::map<std::string, hashmap>::const_iterator it = _sessionStore.find(sessionId);
+    if (it != _sessionStore.end())
+        return  it->second;
+    return hashmap();
+}
+
+void Client::setSessionValueById(
+    std::string const &sessionId,
+    std::pair<std::string, std::string> const &value) {
+    hashmap tmp = getSessionById(sessionId);
+    if (tmp.empty())
+        return ;
+    tmp[value.first] = value.second;
+}
