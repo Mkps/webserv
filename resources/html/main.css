@@ -367,7 +367,7 @@ body {
  border-radius: 10px;
  font-size: 0.8em;
  font-family: Helvetica, Arial, sans-serif;
- background-color: rgb(255, 212, 82);
+ background-color: rgba(255, 212, 82, 0.729);
  width: 66%;
  padding: 20px;
  padding-left: 50px;
@@ -409,6 +409,46 @@ body {
 
 .container #result {
   margin-top: 20px;
+}
+
+#error_page {
+ background-color: #222;
+ color: #fff;
+}
+
+#error_page h1 {
+  margin-bottom: 1em;
+  font-size:1.75em;
+}
+#error_page #img404 {
+  width: 66%;
+  max-width: 48rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+
+}
+#error_page img {
+  width: 100%;
+}
+#error_page h2 {
+  font-size: 1.2em;
+  align-self: flex-start;
+  margin-left: 0%;
+  margin-bottom: 0.5em;
+}
+#error_page p {
+  font-size: 0.8em;
+  margin-top: 0em;
+  margin-bottom: 0.4em;
+}
+#error_page #error_container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+
 }
 
 @media (max-width: 600px) {
