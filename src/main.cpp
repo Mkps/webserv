@@ -6,7 +6,7 @@
 /*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/14 16:28:38 by aloubier          #+#    #+#             */
-/*   Updated: 2024/07/28 18:17:39 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/08/02 19:31:43 by yzaoui           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,23 @@ bool isFile(const std::string &path) {
   }
   return (info.st_mode & S_IFREG) != 0;
 }
+
+// verifier que chaque configuration on un listen different
+void  verif_same_listen(std::vector<Configuration> tab)
+{
+  std::vector<std::string> all_listen_of_each_conf;
+  for (std::vector<Configuration>::iterator it = tab.begin(); it != tab.end(); it++)
+  {
+    std::vector<std::string>  all_listen = it->get_value("listen");
+    if (all_listen.empty())
+      continue;
+    std::string actual_listen = all_listen[0];
+    if (std::find(all_listen_of_each_conf.begin(), all_listen_of_each_conf.end(), actual_listen) != all_listen_of_each_conf.end())
+        throw std::invalid_argument("Incorrect File config: different servers use the same listen port");
+    all_listen_of_each_conf.push_back(actual_listen);
+  }
+}
+
 int main(int ac, char **av) {
   const std::string defaultfile = "configurations/minimal.config";
   try {
@@ -43,8 +60,7 @@ int main(int ac, char **av) {
       if (isFile(av[1]))
         fileConfig = av[1];
       else if (!isDirectory(av[1]))
-        throw std::invalid_argument(
-            "Incorrect argument it's not a Directory and not a File.");
+        throw std::invalid_argument("Incorrect argument it's not a Directory and not a File.");
     }
     std::vector<Configuration> ConfigurationForAllServ = getAllConf(fileConfig);
     for (std::vector<Configuration>::iterator it =
@@ -53,6 +69,7 @@ int main(int ac, char **av) {
       (*it).show();
       std::cout << "----------" << std::endl;
     }
+    verif_same_listen(ConfigurationForAllServ);
     Server *server = new Server(ConfigurationForAllServ);
     server->run();
     delete server;
