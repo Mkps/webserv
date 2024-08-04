@@ -14,7 +14,6 @@
 #include "Client.hpp"
 #include "http_utils.hpp"
 #include <algorithm>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -27,6 +26,7 @@ Request::Request(std::string const &request) : _requestLine(request) {
   _isCGI = false;
   _cgiIndex = -1;
   _cgiPath = "";
+  _size = 0;
 }
 
 Request::Request(Request const &src) { *this = src; }
@@ -35,6 +35,7 @@ Request &Request::operator=(Request const &rhs) {
   _requestLine = rhs.line();
   _requestHeaders = rhs.headers();
   _isCGI = rhs._isCGI;
+  _size = rhs._size;
   return *this;
 }
 
@@ -197,4 +198,11 @@ void Request::clear() {
   _body = "";
   _cgiIndex = 0;
   _cgiPath = "";
+  _size = 0;
+}
+void Request::setSize(const size_t &size) {
+    _size = size;
+}
+size_t const &Request::size() const {
+    return _size;
 }

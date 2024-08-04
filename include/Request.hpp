@@ -24,6 +24,7 @@ private:
   hashmap _requestHeaders;
   std::string _body;
   bool _isCGI;
+  size_t _size;
   int _cgiIndex;
   std::string _cgiPath;
   void retrieveHeaders(std::string const &request);
@@ -52,5 +53,7 @@ public:
   void unchunkRequest(void);
   void trimBody();
   void clear();
+  void setSize(const size_t &size);
+  size_t const &size() const;
 };
 #endif

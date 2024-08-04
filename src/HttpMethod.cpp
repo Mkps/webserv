@@ -152,9 +152,9 @@ void HttpMethod::post(Request const &req, Response &res,
       res._body = cgi.body();
   } else if (res._statusCode == 200) {
     if (fileStatus(req.getFilePath()) == FILE_REG) {
-        std::cout << req.getFilePath() << std::endl;
-        get(req, res);
-        return ;
+      std::cout << req.getFilePath() << std::endl;
+      get(req, res);
+      return;
     }
     std::string uploadBody = "";
     std::string fileName = "";
