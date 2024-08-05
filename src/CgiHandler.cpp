@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
-#include "http_utils.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>

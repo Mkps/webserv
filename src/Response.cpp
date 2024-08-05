@@ -35,6 +35,9 @@ Response::Response() { setDefaultHeaders(); }
 
 Response::Response(Request const &request) {
   (void)request;
+  _offset = 0;
+  _bytes_sent = 0;
+  _headerSent = false;
   setDefaultHeaders();
 }
 
@@ -285,9 +288,12 @@ void Response::setDefaultHeaders() {
 }
 
 void Response::clear() {
+  _offset = 0;
+  _bytes_sent = 0;
   _cgi = CgiHandler();
   _responseHeaders.clear();
   _statusCode = 200;
+  _headerSent = false;
   setDefaultHeaders();
 }
 
@@ -306,30 +312,58 @@ std::string Response::chunkResponse() {
   return chunked_body;
 }
 
-void Response::sendResponse(int clientSocket) {
-  std::ostringstream res;
-  _offset = 0;
-  _bytes_sent = 0;
-  if (_body.size() > 1024 ||
-      _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
+int Response::sendHeader(int clientSocket) {
     setHeader("Transfer-Encoding", "chunked", true);
     setHeader("Connection", "keep-alive", true);
-    res << writeHeader();
-    sendStr(clientSocket, res.str());
-    res.clear();
+    if (_responseHeaders.find("Content-Length") != _responseHeaders.end())
+        _responseHeaders.erase("Content-Length");
+    sendStr(clientSocket, writeHeader());
+    logItem("header sent \n", writeHeader());
+    return 1;
+}
+inline std::string chunkStr(std::string const &chunk) {
+    std::string size = to_hex(chunk.size()) + "\r\n";
+    std::string body = chunk + "\r\n"; 
+    return size + body;
+}
+
+// Returns FAILURE on partial SUCCESS;
+int Response::sendResponse(int clientSocket) {
+  std::ostringstream res;
+  logItem("res", 1);
+  if (_body.size() > 1024 ||
+      _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
+    if (_headerSent == false) {
+        sendHeader(clientSocket);
+        _headerSent = true;
+    }
+    logItem("res", 2);
+    std::string chunk;
     while (_offset < _body.size()) {
-      std::string chunk = chunkResponse();
-      int tmp = sendChunk(clientSocket, chunk);
+      if (chunk.empty()) {
+        chunk = chunkStr(chunkResponse());
+      }
+      int tmp = sendStr(clientSocket, chunk);
+      if (tmp < static_cast<int>(chunk.size())) {
+      }
+      logItem("res", 3);
+      if (tmp < 0) {
+        logItem("tmp", tmp);
+        perror("tmp:");
+        return 0;
+      }
       _bytes_sent += tmp;
     }
     std::string chunk = chunkResponse();
     sendStr(clientSocket, chunk);
+    logItem("res", 4);
   } else {
     res << writeHeader() << _body;
     if (DEBUG)
       std::cout << writeHeader() << _body << std::endl;
     sendStr(clientSocket, res.str());
   }
+  return EXIT_SUCCESS;
 }
 
 CgiHandler Response::cgi() { return _cgi; }

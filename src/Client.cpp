@@ -237,21 +237,28 @@ int Client::emptySocket() {
 
 void Client::handleResponse() {
   if (_state == C_CGI) {
+    logItem("hr", 1);
     _res.processCgi(_req, *this);
     return;
   } else if (_state == C_REQ) {
+    logItem("hr", 2);
     _res.processRequest(_req, *this);
     return;
   }
   if (_state == C_RES) {
+    logItem("hr", 3);
     if (emptySocket()) {
       _res.setStatusCode(500);
       _res.setBodyError(500, errPage(*this, 500));
     }
-    _res.sendResponse(_fd);
-    _res.clear();
-    _req.clear();
-    setState(C_OFF);
+    logItem("hr", 4);
+    if (!_res.sendResponse(_fd)) {
+      logItem("response", "sent");
+      _res.clear();
+      _req.clear();
+      _state = C_OFF;
+    } else
+        setState(C_ERR);
   }
   return;
 }

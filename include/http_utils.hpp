@@ -25,7 +25,7 @@ std::string NumberToString ( T Number );
 
 std::string to_hex(size_t value);
 int sendStr(int clientSocket, std::string const &str); 
-int sendChunk(int clientSocket, std::string const &chunk);
+int sendChunk(int const &clientSocket, std::string const &chunk, size_t &offset);
 int	fileStatus(const std::string & path);
 int	getFileSize(const std::string & path);
 std::string get_current_date();

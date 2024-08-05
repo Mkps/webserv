@@ -23,7 +23,7 @@ class Socket;
 
 #define BUFFER_SIZE 1024
 
-enum e_reqest_state { C_OFF, C_RECVH, C_RECV, C_REQ, C_CGI, C_RES };
+enum e_reqest_state { C_OFF, C_RECVH, C_RECV, C_REQ, C_CGI, C_RES, C_ERR};
 
 enum e_client_state { CLIENT_CONNECTED, CLIENT_DISCONNECTED };
 
