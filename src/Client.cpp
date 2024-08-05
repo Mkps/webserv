@@ -104,44 +104,72 @@ std::string generateUUID() {
   return std::string(uuid);
 }
 
-int Client::recvRequest(void) {
-  char buffer[BUFFER_SIZE + 1] = {0};
-  int ret;
-
-  ret = BUFFER_SIZE;
-  if (_state != C_RECV)
-    _request.clear();
-  int flags = fcntl(_fd, F_GETFL, 0);
-  fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
-  if (_req.size() == 0 || _state == C_RECV) {
-    while (ret == BUFFER_SIZE) {
-      ret = recv(_fd, buffer, BUFFER_SIZE, 0);
-      if (ret > 0) {
-        _request.append(buffer, ret);
-        bzero(buffer, sizeof(buffer));
-      }
-    }
-  }
-  fcntl(_fd, F_SETFL, flags);
-  if (_request.empty()) {
-    _state = C_OFF;
-    return (CLIENT_DISCONNECTED);
-  }
-  if (ret >= 0 && _req.size() == 0) {
-    size_t pos = _request.find("Content-Length");
-    if (pos != std::string::npos) {
+void Client::handleLength() {
+  size_t pos = _request.find("Content-Length");
+  if (pos != std::string::npos) {
+    if (_req.size() == 0) {
       size_t start = pos + 16;
       size_t end = _request.find_first_of(" \n\t\r", start);
       size_t tmp = std::strtod(_request.substr(start, end).c_str(), NULL);
       _req.setSize(tmp + _request.size());
     }
-    _state = C_RECV;
-    return (CLIENT_CONNECTED);
+    if (_request.size() < _req.size())
+      _state = C_RECV;
+    else
+      _state = C_REQ;
   }
-  if (ret == -1 || _request.size() < _req.size()) {
-    _state = C_RECV;
-    return (CLIENT_CONNECTED);
+}
+void Client::handleChunked() {
+  if (_request.find("0\r\n\r\n") != std::string::npos)
+    _state = C_REQ;
+}
+int Client::recvRequest(void) {
+  char buffer[BUFFER_SIZE + 1] = {0};
+  int ret;
+
+  ret = BUFFER_SIZE;
+  if (_state < C_RECVH || _state > C_RECV)
+    _request.clear();
+  int flags = fcntl(_fd, F_GETFL, 0);
+  fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+  if (_state == C_OFF || _state == C_RECVH) {
+    ret = recv(_fd, buffer, BUFFER_SIZE, 0);
+    if (ret > 0) {
+      _request.append(buffer, ret);
+      bzero(buffer, sizeof(buffer));
+    }
+    if (ret == -1)
+      return (CLIENT_CONNECTED);
+    if (_request.empty()) {
+      _state = C_OFF;
+      return (CLIENT_DISCONNECTED);
+    }
+    _state = C_RECVH;
+    if (_request.find("\r\n\r\n")) {
+      _state = C_RECV;
+    }
+  } else if (_state == C_RECV) {
+    ret = recv(_fd, buffer, BUFFER_SIZE, 0);
+    if (ret > 0) {
+      _request.append(buffer, ret);
+      bzero(buffer, sizeof(buffer));
+    }
+    if (ret == -1)
+      return (CLIENT_CONNECTED);
   }
+  if (_state == C_RECV) {
+    if (_request.find("Content-Length") != std::string::npos)
+      handleLength();
+    if (_request.find("Transfer-Encoding") != std::string::npos)
+      handleChunked();
+    if (_request.size() > 4 && _request.substr(0, 4) != "POST")
+      _state = C_REQ;
+  }
+
+  fcntl(_fd, F_SETFL, flags);
+  if (_state == C_RECV || _state == C_RECVH)
+    return (CLIENT_CONNECTED);
+  _req.setRequest(_request);
   if (_req.findValue("transfer-encoding") == "chunked") {
     try {
       _req.unchunkRequest();
@@ -152,7 +180,6 @@ int Client::recvRequest(void) {
       return (CLIENT_CONNECTED);
     }
   }
-  _req.setRequest(_request);
   std::string tmp = _req.findValue("host");
   _serverName = tmp;
   if (!tmp.empty()) {
@@ -168,7 +195,6 @@ int Client::recvRequest(void) {
     _sessionStore[sessionId]["uuid"] = sessionId;
   hashmap currentSession = getSessionById(sessionId);
   if (!currentSession.empty()) {
-    //_cookie.log();
     _cookie.setSession(currentSession);
   }
   _state = C_REQ;
@@ -181,9 +207,8 @@ void Client::log(void) const {
 }
 
 std::ostream &operator<<(std::ostream &o, Client const &r) {
-  o << "Client " << r.getId() << " [" << r.getState() << "] "
-    << " (" << r.getFd() << ") from " << r.getIp() << " on socket "
-    << *r.getSocket();
+  o << "Client " << r.getId() << " [" << r.getState() << "] " << " ("
+    << r.getFd() << ") from " << r.getIp() << " on socket " << *r.getSocket();
   if (!r.getServerName().empty())
     o << " with name " << r.getServerName();
   else
