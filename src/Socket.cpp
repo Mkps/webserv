@@ -42,7 +42,7 @@ Socket::Socket(std::string ip, short port) : _ip(ip), _port(port) {
     throw std::runtime_error("Failed to create socket");
   }
 
-  if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+  if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt,
                  sizeof(opt)) == -1) {
     throw std::runtime_error("Failed to reuse socket address");
   }

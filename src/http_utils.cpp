@@ -11,12 +11,12 @@
 /* ************************************************************************** */
 
 #include "http_utils.hpp"
+#include "Client.hpp"
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include "Client.hpp"
 
 std::string to_hex(size_t value) {
   std::ostringstream oss(std::ios::binary);
@@ -33,20 +33,32 @@ int sendChunk(int clientSocket, std::string const &chunk) {
   int ret = 0;
   std::string size = to_hex(chunk.size()) + "\r\n";
   std::string chunkMsg = chunk + "\r\n";
-  tmp = send(clientSocket, size.c_str(), size.size(), 0);
-  if ((size_t)tmp != size.size()) {
-    std::cerr << "Warning: Message was not fully sent" << std::endl;
+  int sent = 0;
+  while (sent < static_cast<int>(size.size())) {
+    tmp = send(clientSocket, size.c_str(), size.size(), 0);
+    if ((size_t)tmp != size.size()) {
+      std::cerr << "Warning: Message was not fully sent" << std::endl;
+    }
+    if (tmp < 0)
+      return tmp;
+    sent += tmp;
   }
-  ret += tmp;
+  ret += sent;
+  sent = 0;
+  while (sent < static_cast<int>(chunkMsg.size())) {
   tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
-  ret += tmp;
+  if (tmp < 0)
+    return tmp;
+  sent += tmp;
+  }
+  ret += sent;
   return ret;
 }
 
 int fileStatus(const std::string &path) {
   struct stat buf;
   if (path.empty())
-      return FILE_NOT;
+    return FILE_NOT;
   if (stat(path.c_str(), &buf) == 0) {
     if (buf.st_mode & S_IFDIR || *path.rbegin() == '/')
       return FILE_DIR;
@@ -96,22 +108,22 @@ std::string get_current_date() {
 }
 
 void logStep(std::string const &s, int n) {
-    std::cerr << s << " ";
-    for (int i = 0; i < n; ++i) {
-        std::cerr << "#";
-    }
-    std::cerr << std::endl;
+  std::cerr << s << " ";
+  for (int i = 0; i < n; ++i) {
+    std::cerr << "#";
+  }
+  std::cerr << std::endl;
 };
 
 void logItem(std::string const &s, std::string const &item) {
-    std::cerr << s << " " << item << std::endl;
+  std::cerr << s << " " << item << std::endl;
 };
 void logItem(std::string const &s, int const &item) {
-    std::cerr << s << " " << item << std::endl;
+  std::cerr << s << " " << item << std::endl;
 };
 int logError(std::string const &s, int const &status) {
-    std::cerr << "Log: " << s << std::endl;
-    return status;
+  std::cerr << "Log: " << s << std::endl;
+  return status;
 }
 std::string errPage(Client &client, size_t error_code) {
   return client.getConfig().get_error_page(error_code);
@@ -170,19 +182,18 @@ std::string trim_copy(std::string s) {
   return s;
 }
 
-std::string formatHeader(const std::string& input) {
-    std::string result = input;
-    bool capitalizeNext = true;
-    for (std::string::iterator it = result.begin(); it != result.end(); ++it) {
-        if (!std::isalpha(*it)) {
-            capitalizeNext = true;
-        } else if (capitalizeNext && std::isalpha(*it)) {
-            *it = std::toupper(*it);
-            capitalizeNext = false;
-        } else {
-            *it = std::tolower(*it);
-        }
+std::string formatHeader(const std::string &input) {
+  std::string result = input;
+  bool capitalizeNext = true;
+  for (std::string::iterator it = result.begin(); it != result.end(); ++it) {
+    if (!std::isalpha(*it)) {
+      capitalizeNext = true;
+    } else if (capitalizeNext && std::isalpha(*it)) {
+      *it = std::toupper(*it);
+      capitalizeNext = false;
+    } else {
+      *it = std::tolower(*it);
     }
-    return result;
+  }
+  return result;
 }
-

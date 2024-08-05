@@ -187,7 +187,7 @@ int Server::_handleClientsEvent(void) {
       return (EXIT_FAILURE);
     }
     Client *client = static_cast<Client *>(ptr);
-    if (client->getState() == C_OFF || client->getState() == C_RECV) {
+    if (client->getState() >= C_OFF && client->getState() <= C_RECV) {
       ret = _handleClientRequest(client);
       if (ret == CLIENT_DISCONNECTED)
         continue;
@@ -197,7 +197,7 @@ int Server::_handleClientsEvent(void) {
       client->setState(C_OFF);
       continue;
     }
-    if (client->getState() == C_RECV) {
+    if (client->getState() >= C_RECVH && client->getState() <= C_RECV) {
       continue;
     }
     client->handleResponse();
@@ -209,7 +209,7 @@ int Server::_handleClientRequest(Client *client) {
   int ret = 0;
 
   ret = client->recvRequest();
-  if (client->getState() == C_RECV) {
+  if (client->getState() >= C_RECVH && client->getState() <= C_RECV) {
     return CLIENT_DISCONNECTED;
   }
   if (ret == CLIENT_DISCONNECTED) {
@@ -246,7 +246,7 @@ void Server::_handleClientResponse(Client *client) { client->handleResponse(); }
 
 void Server::run() {
   int ret = 0;
-  int timeout = 500;
+  int timeout = 150;
 
   _instance = this;
   signal(SIGINT, Server::signalHandler);
