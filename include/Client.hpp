@@ -55,7 +55,11 @@ public:
   int recvRequest();
   int emptySocket();
   int readChunk();
+
+  void handleRequest();
   void handleResponse();
+  void handleError();
+
   void log(void) const;
 
 private:

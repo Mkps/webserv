@@ -51,7 +51,7 @@ Server::Server(std::vector<Configuration> const &vConf) : _id(vConf.size()) {
     std::string host;
     int port;
     if (vConf[i].get_value("host").empty())
-      host = "0.0.0.0";
+      host = "127.0.0.1";
     else
       host = vConf[i].get_value("host")[0];
     if (vConf[i].get_value("listen").empty())
@@ -67,7 +67,7 @@ Server::Server(std::vector<Configuration> const &vConf) : _id(vConf.size()) {
 }
 
 Server::~Server(void) {
-  std::cerr << "Quitting" << std::endl;
+  std::cerr << "\tQuitting" << std::endl;
   Server::_nbrOFServ--;
   for (size_t i = 0; i < _sockets.size(); i++) {
     delete _sockets[i];
@@ -176,13 +176,11 @@ int Server::_handleClientsEvent(void) {
 
   for (size_t i = _sockets.size(); i < _pollfds.size(); i++) {
     if (_pollfds[i].revents & POLLIN) {
-      logItem("pollin", i);
       ptr = _clients[i - _sockets.size()];
       if (!ptr) {
         std::cerr << "Failed to get client" << std::endl;
         return (EXIT_FAILURE);
       }
-      logItem("pollin", "b");
       Client *client = static_cast<Client *>(ptr);
       if (client->getState() >= C_OFF && client->getState() <= C_RECV) {
         ret = _handleClientRequest(client);
@@ -190,19 +188,14 @@ int Server::_handleClientsEvent(void) {
           continue;
         client->setState(C_REQ);
       }
-      logItem("pollin", "c");
       if (client->getRequest().empty() && client->getState() == C_REQ) {
         client->setState(C_OFF);
         continue;
       }
-      logItem("pollin", "d");
       if (client->getState() >= C_RECVH && client->getState() <= C_RECV) {
         continue;
       }
-      logItem("pollin", "e");
-      client->handleResponse();
-      logItem("clientstate", client->getState());
-      logItem("pollin", "f");
+      client->handleRequest();
     }
     if (_pollfds[i].revents & POLLOUT) {
       ptr = _clients[i - _sockets.size()];
@@ -211,9 +204,19 @@ int Server::_handleClientsEvent(void) {
         return (EXIT_FAILURE);
       }
       Client *client = static_cast<Client *>(ptr);
-      logItem("pollout", i);
       if (client->getState() == C_RES)
         client->handleResponse();
+    }
+    if (_pollfds[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
+      ptr = _clients[i - _sockets.size()];
+      if (!ptr) {
+        std::cerr << "Failed to get client" << std::endl;
+        return (EXIT_FAILURE);
+      }
+      Client *client = static_cast<Client *>(ptr);
+      if (client->getState() == C_RES) {
+        client->handleError();
+      }
     }
   }
   return (EXIT_SUCCESS);
@@ -284,8 +287,5 @@ void Server::run() {
     if (_handleClientsEvent() == EXIT_FAILURE) {
       break;
     }
-    /*if (_handleSend() == EXIT_FAILURE) {*/
-    /*  break;*/
-    /*}*/
   }
 }

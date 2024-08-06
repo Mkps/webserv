@@ -31,7 +31,12 @@
 #include <unistd.h>
 #include <vector>
 
-Response::Response() { setDefaultHeaders(); }
+Response::Response() {
+  _offset = 0;
+  _bytes_sent = 0;
+  _headerSent = false;
+  setDefaultHeaders();
+}
 
 Response::Response(Request const &request) {
   (void)request;
@@ -298,11 +303,12 @@ void Response::clear() {
 }
 
 std::string Response::chunkResponse() {
-  const size_t chunk_size = 1024;
+  size_t chunk_size = 1024;
   std::string chunked_body;
 
   if (_offset < _body.size()) {
-    size_t len = std::min(chunk_size, _body.size() - _offset);
+    size_t sub = _body.size() - _offset;
+    size_t len = std::min(chunk_size, sub);
     std::string chunk = _body.substr(_offset, len);
     _offset += len;
     return chunk;
@@ -313,50 +319,54 @@ std::string Response::chunkResponse() {
 }
 
 int Response::sendHeader(int clientSocket) {
-    setHeader("Transfer-Encoding", "chunked", true);
-    setHeader("Connection", "keep-alive", true);
-    if (_responseHeaders.find("Content-Length") != _responseHeaders.end())
-        _responseHeaders.erase("Content-Length");
-    sendStr(clientSocket, writeHeader());
-    logItem("header sent \n", writeHeader());
-    return 1;
+  setHeader("Transfer-Encoding", "chunked", true);
+  setHeader("Connection", "keep-alive", true);
+  if (_responseHeaders.find("Content-Length") != _responseHeaders.end())
+    _responseHeaders.erase("Content-Length");
+  if (sendStr(clientSocket, writeHeader()) < 0)
+    return 0;
+  return 1;
 }
 inline std::string chunkStr(std::string const &chunk) {
-    std::string size = to_hex(chunk.size()) + "\r\n";
-    std::string body = chunk + "\r\n"; 
-    return size + body;
+  std::string size = to_hex(chunk.size()) + "\r\n";
+  std::string body = chunk + "\r\n";
+  return size + body;
 }
 
 // Returns FAILURE on partial SUCCESS;
 int Response::sendResponse(int clientSocket) {
   std::ostringstream res;
-  logItem("res", 1);
   if (_body.size() > 1024 ||
       _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
     if (_headerSent == false) {
-        sendHeader(clientSocket);
+      if (sendHeader(clientSocket))
         _headerSent = true;
+      else
+        return 1;
     }
-    logItem("res", 2);
-    std::string chunk;
-    while (_offset < _body.size()) {
+    static std::string chunk;
+    if (_offset < _body.size()) {
       if (chunk.empty()) {
         chunk = chunkStr(chunkResponse());
       }
       int tmp = sendStr(clientSocket, chunk);
-      if (tmp < static_cast<int>(chunk.size())) {
-      }
-      logItem("res", 3);
       if (tmp < 0) {
-        logItem("tmp", tmp);
-        perror("tmp:");
-        return 0;
+        return 1;
+      } else if (tmp < static_cast<int>(chunk.size())) {
+        int missing = chunk.size() - tmp;
+        _offset -= missing;
+        chunk.substr(missing);
+        _bytes_sent += tmp;
+        return 1;
       }
       _bytes_sent += tmp;
+      chunk = "";
+      return 1;
+    } else {
+      std::string chunk = chunkResponse();
+      sendStr(clientSocket, chunk);
+      chunk = "";
     }
-    std::string chunk = chunkResponse();
-    sendStr(clientSocket, chunk);
-    logItem("res", 4);
   } else {
     res << writeHeader() << _body;
     if (DEBUG)
