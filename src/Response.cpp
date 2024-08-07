@@ -123,7 +123,6 @@ void Response::processCgi(Request &req, Client &client) {
       client.setState(C_RES);
     } else {
       if (_cgi.timeout()) {
-        std::cout << "CGI TIMEOUT" << std::endl;
         _cgi.killCgi();
         _statusCode = 504;
         if (req.line().getMethod() == "GET")
@@ -211,8 +210,10 @@ void Response::processRequest(Request &req, Client &client) {
   } else {
     setBodyError(_statusCode, errPage(client, _statusCode));
   }
-  if (_cgi.isRunning())
+  if (_cgi.isRunning()){
     client.setState(C_CGI);
+    processCgi(req, client);
+  }
   else
     client.setState(C_RES);
 }
@@ -307,11 +308,9 @@ std::string Response::chunkResponse() {
   std::string chunked_body;
 
   if (_offset < _body.size()) {
-    size_t sub = _body.size() - _offset;
-    size_t len = std::min(chunk_size, sub);
-    std::string chunk = _body.substr(_offset, len);
+    size_t len = std::min(chunk_size, (_body.size() - _offset));
+    chunked_body = _body.substr(_offset, len);
     _offset += len;
-    return chunk;
   } else {
     chunked_body = "0\r\n\r\n";
   }
@@ -323,7 +322,7 @@ int Response::sendHeader(int clientSocket) {
   setHeader("Connection", "keep-alive", true);
   if (_responseHeaders.find("Content-Length") != _responseHeaders.end())
     _responseHeaders.erase("Content-Length");
-  if (sendStr(clientSocket, writeHeader()) < 0)
+  if (sendStr(clientSocket, writeHeader()) <= 0)
     return 0;
   return 1;
 }
@@ -371,7 +370,16 @@ int Response::sendResponse(int clientSocket) {
     res << writeHeader() << _body;
     if (DEBUG)
       std::cout << writeHeader() << _body << std::endl;
-    sendStr(clientSocket, res.str());
+    int tmp = sendStr(clientSocket, res.str());
+    if (tmp < 0) {
+      return 1;
+    } else if (tmp < static_cast<int>(res.str().size())) {
+      int missing = res.str().size() - tmp;
+      _offset -= missing;
+      res.str().substr(missing);
+      _bytes_sent += tmp;
+      return 1;
+    }
   }
   return EXIT_SUCCESS;
 }

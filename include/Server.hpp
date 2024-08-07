@@ -11,7 +11,7 @@
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
-# define SERVER_HPP
+#define SERVER_HPP
 
 #include "./Configuration.hpp"
 
@@ -26,45 +26,45 @@ class Socket;
 class Client;
 
 class Server {
-	public:
-		Server(std::string config);
-        Server(std::vector<Configuration> const &vConf);
-		~Server();
+public:
+  Server(std::string config);
+  Server(std::vector<Configuration> const &vConf);
+  ~Server();
 
-		std::vector<s_pollfd>	getPollfds() const;
-		std::vector<Socket *>	getSockets() const;
-		std::vector<Client *>	getClients() const;
-        bool socketExists(std::string host, int port) const;
+  std::vector<s_pollfd> getPollfds() const;
+  std::vector<Socket *> getSockets() const;
+  std::vector<Client *> getClients() const;
+  bool socketExists(std::string host, int port) const;
 
-		static void				signalHandler(int signal);
-		void					run();
+  static void signalHandler(int signal);
+  void run();
 
-	private:
-		std::vector<s_pollfd>	_pollfds;
-		std::vector<Socket *>	_sockets;
-		std::vector<Client *>	_clients;
-		size_t					_id;
-        std::vector<Configuration>          _config;
-        int _continue;
-		// Configuration			_config;
+private:
+  std::vector<s_pollfd> _pollfds;
+  std::vector<Socket *> _sockets;
+  std::vector<Client *> _clients;
+  size_t _id;
+  std::vector<Configuration> _config;
+  int _continue;
+  // Configuration			_config;
 
-		static size_t			_nbrOFServ;
-		static Server			*_instance;
+  static size_t _nbrOFServ;
+  static Server *_instance;
 
-		Server(void);
+  Server(void);
 
-		int						_handleNewConnection(void);
-		int						_handleClientsEvent(void);
-		void					_handleClientResponse(Client *client);
-		int						_handleClientRequest(Client *client);
-        int _handleTimeout(); 
-        int _handleSend(); 
-	
+  int _handleNewConnection(void);
+  int _handleClientsEvent(void);
+  void _handleClientResponse(Client *client);
+  int _handleClientRequest(Client *client);
+  int _handleTimeout();
+  int _handleSend();
+  void _handleEventIn(Client &client, int const &i);
 
-		Socket					*_createSocket(std::string ip, int port);
-		void					_deleteSocket(Socket *socket);
-		Client					*_createClient(Socket *socket, Configuration const &config);
-		void					_deleteClient(Client *client);
+  Socket *_createSocket(std::string ip, int port);
+  void _deleteSocket(Socket *socket);
+  Client *_createClient(Socket *socket, Configuration const &config);
+  void _deleteClient(Client *client);
 };
 
 #endif

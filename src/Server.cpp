@@ -170,9 +170,27 @@ int Server::_handleNewConnection(void) {
   return (EXIT_SUCCESS);
 }
 
+void Server::_handleEventIn(Client &client, int const &i) {
+  int ret = 0;
+      if (client.getState() >= C_OFF && client.getState() <= C_RECV) {
+        ret = _handleClientRequest(&client);
+        if (ret == CLIENT_DISCONNECTED)
+          return ;
+        client.setState(C_REQ);
+      }
+      if (client.getRequest().empty() && client.getState() == C_REQ) {
+        client.setState(C_OFF);
+        return ;
+      }
+      if (client.getState() >= C_RECVH && client.getState() <= C_RECV) {
+        return ;
+      }
+      client.handleRequest();
+      _pollfds[i].events = POLLIN | POLLOUT;
+}
+
 int Server::_handleClientsEvent(void) {
   void *ptr = NULL;
-  int ret = 0;
 
   for (size_t i = _sockets.size(); i < _pollfds.size(); i++) {
     if (_pollfds[i].revents & POLLIN) {
@@ -182,20 +200,7 @@ int Server::_handleClientsEvent(void) {
         return (EXIT_FAILURE);
       }
       Client *client = static_cast<Client *>(ptr);
-      if (client->getState() >= C_OFF && client->getState() <= C_RECV) {
-        ret = _handleClientRequest(client);
-        if (ret == CLIENT_DISCONNECTED)
-          continue;
-        client->setState(C_REQ);
-      }
-      if (client->getRequest().empty() && client->getState() == C_REQ) {
-        client->setState(C_OFF);
-        continue;
-      }
-      if (client->getState() >= C_RECVH && client->getState() <= C_RECV) {
-        continue;
-      }
-      client->handleRequest();
+      _handleEventIn(*client, i);
     }
     if (_pollfds[i].revents & POLLOUT) {
       ptr = _clients[i - _sockets.size()];
@@ -206,6 +211,8 @@ int Server::_handleClientsEvent(void) {
       Client *client = static_cast<Client *>(ptr);
       if (client->getState() == C_RES)
         client->handleResponse();
+      else if (client->getState() == C_OFF)
+        _pollfds[i].events = POLLIN;
     }
     if (_pollfds[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
       ptr = _clients[i - _sockets.size()];
@@ -245,6 +252,9 @@ int Server::_handleTimeout() {
     if (state == C_CGI) {
       _clients[i]->checkCgi();
     }
+    else if (state > C_OFF && state < C_RES) {
+        _clients[i]->checkTimeout();
+    }
   }
   return 0;
 }
@@ -252,10 +262,12 @@ int Server::_handleTimeout() {
 int Server::_handleSend() {
   for (size_t i = 0; i < _clients.size(); ++i) {
     int state = _clients[i]->getState();
-    logItem("client", i);
-    logItem("state", state);
+    if (state == C_RECV) {
+      _handleClientRequest(_clients[i]);
+    } else if (state == C_REQ) {
+        _handleEventIn(*_clients[i], i);
+    }
     if (state == C_RES) {
-      _clients[i]->log();
       _clients[i]->handleResponse();
     }
   }
@@ -287,5 +299,9 @@ void Server::run() {
     if (_handleClientsEvent() == EXIT_FAILURE) {
       break;
     }
+    if (_handleSend() == EXIT_FAILURE) {
+      break;
+    }
+    _handleTimeout();
   }
 }

@@ -60,6 +60,9 @@ public:
   void handleResponse();
   void handleError();
 
+  void checkTimeout();
+  int  timeout();
+  void updateTime();
   void log(void) const;
 
 private:
@@ -69,6 +72,7 @@ private:
   Request _req;
   Response _res;
   size_t _id;
+  timeval_t _startTime;
   int _fd;
   int _state;
   std::string _uuid;

@@ -20,6 +20,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <iostream>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -69,7 +70,7 @@ int Client::getState() const { return _state; }
 
 void Client::clearRequest(void) { _request.clear(); }
 std::string generateUUID() {
-  char uuid[37]; // UUID is 36 characters plus null terminator
+  char uuid[37];
   const char *hex_chars = "0123456789abcdef";
   srand((unsigned)time(0));
 
@@ -82,14 +83,12 @@ std::string generateUUID() {
   }
   uuid[13] = '-';
 
-  // UUID version 4 (4xxx)
   uuid[14] = '4';
   for (int i = 15; i < 18; ++i) {
     uuid[i] = hex_chars[rand() % 16];
   }
   uuid[18] = '-';
 
-  // UUID variant 1 (8xxx, 9xxx, Axxx, Bxxx)
   uuid[19] = hex_chars[(rand() % 4) + 8];
   for (int i = 20; i < 23; ++i) {
     uuid[i] = hex_chars[rand() % 16];
@@ -103,22 +102,38 @@ std::string generateUUID() {
 
   return std::string(uuid);
 }
+inline int get_header_length(std::string const &header) {
+  size_t pos = header.find("\r\n\r\n");
+  if (pos == header.npos)
+    return -1;
+  return header.substr(0, pos + 4).size();
+}
+
+inline int get_content_length(std::string const &header) {
+  size_t pos = header.find("Content-Length");
+  if (pos == std::string::npos)
+    return -1;
+  size_t start = pos + 16;
+  size_t end = header.find_first_of(" \n\t\r", start);
+  if (end == header.npos)
+    return -1;
+  return std::strtod(header.substr(start, end).c_str(), NULL);
+}
 
 void Client::handleLength() {
-  size_t pos = _request.find("Content-Length");
-  if (pos != std::string::npos) {
-    if (_req.size() == 0) {
-      size_t start = pos + 16;
-      size_t end = _request.find_first_of(" \n\t\r", start);
-      size_t tmp = std::strtod(_request.substr(start, end).c_str(), NULL);
-      _req.setSize(tmp + _request.size());
-    }
-    if (_request.size() < _req.size())
-      _state = C_RECV;
-    else
-      _state = C_REQ;
+  if (_req.size() == 0) {
+    int header = get_header_length(_request);
+    int cl = get_content_length(_request);
+    if (header == -1 || cl == -1)
+      return;
+    _req.setSize(header + cl);
   }
+  if (_request.size() < _req.size())
+    _state = C_RECV;
+  else
+    _state = C_REQ;
 }
+
 void Client::handleChunked() {
   if (_request.find("0\r\n\r\n") != std::string::npos)
     _state = C_REQ;
@@ -128,6 +143,8 @@ int Client::recvRequest(void) {
   int ret;
 
   ret = BUFFER_SIZE;
+  if (_state == C_OFF)
+      updateTime();
   if (_state < C_RECVH || _state > C_RECV)
     _request.clear();
   int flags = fcntl(_fd, F_GETFL, 0);
@@ -140,7 +157,7 @@ int Client::recvRequest(void) {
     }
     if (ret == -1)
       return (CLIENT_CONNECTED);
-    if (_request.empty()) {
+    if (_request.empty() || ret == 0) {
       _state = C_OFF;
       return (CLIENT_DISCONNECTED);
     }
@@ -153,9 +170,10 @@ int Client::recvRequest(void) {
     if (ret > 0) {
       _request.append(buffer, ret);
       bzero(buffer, sizeof(buffer));
+    } else if (ret == 0) {
+      _state = C_OFF;
+      return CLIENT_DISCONNECTED;
     }
-    if (ret == -1)
-      return (CLIENT_CONNECTED);
   }
   if (_state == C_RECV) {
     if (_request.find("Content-Length") != std::string::npos)
@@ -165,7 +183,6 @@ int Client::recvRequest(void) {
     if (_request.size() > 4 && _request.substr(0, 4) != "POST")
       _state = C_REQ;
   }
-
   fcntl(_fd, F_SETFL, flags);
   if (_state == C_RECV || _state == C_RECVH)
     return (CLIENT_CONNECTED);
@@ -201,6 +218,25 @@ int Client::recvRequest(void) {
   return (CLIENT_CONNECTED);
 }
 
+void Client::checkTimeout() {
+  if (timeout()) {
+    _state = C_RES;
+    _res.setStatusCode(500);
+    _res.setBodyError(500, errPage(*this, 500));
+  }
+}
+
+int Client::timeout() {
+  timeval_t currentTime;
+  gettimeofday(&currentTime, NULL);
+  double elapsedTime = (currentTime.tv_sec - _startTime.tv_sec) +
+                       (currentTime.tv_usec - _startTime.tv_usec) / 1000000.0;
+  if (elapsedTime > 5)
+    return 1;
+  return 0;
+}
+
+void Client::updateTime() { gettimeofday(&_startTime, NULL); }
 void Client::log(void) const {
   std::cout << *this << std::endl;
   std::cout << _request << std::endl;
@@ -251,7 +287,7 @@ void Client::handleResponse() {
       _res.clear();
       _req.clear();
       _state = C_OFF;
-    } 
+    }
   }
   return;
 }
