@@ -28,7 +28,8 @@ int sendStr(int clientSocket, std::string const &str) {
   return send(clientSocket, str.c_str(), str.size(), 0);
 }
 
-int sendChunk(int clientSocket, std::string const &chunk) {
+int sendChunk(int const &clientSocket, std::string const &chunk,
+              size_t &offset) {
   int tmp = 0;
   int ret = 0;
   std::string size = to_hex(chunk.size()) + "\r\n";
@@ -37,7 +38,8 @@ int sendChunk(int clientSocket, std::string const &chunk) {
   while (sent < static_cast<int>(size.size())) {
     tmp = send(clientSocket, size.c_str(), size.size(), 0);
     if ((size_t)tmp != size.size()) {
-      std::cerr << "Warning: Message was not fully sent" << std::endl;
+      std::cerr << "Warning: Size chunk was not fully sent" << std::endl;
+      offset -= (size.size() - 2 - tmp);
     }
     if (tmp < 0)
       return tmp;
@@ -46,10 +48,14 @@ int sendChunk(int clientSocket, std::string const &chunk) {
   ret += sent;
   sent = 0;
   while (sent < static_cast<int>(chunkMsg.size())) {
-  tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
-  if (tmp < 0)
-    return tmp;
-  sent += tmp;
+    tmp = send(clientSocket, chunkMsg.c_str(), chunkMsg.size(), 0);
+    if ((size_t)tmp != size.size()) {
+      std::cerr << "Warning: Chunk was not fully sent" << std::endl;
+      offset -= (chunkMsg.size() - 2 - tmp);
+    }
+    if (tmp < 0)
+      return tmp;
+    sent += tmp;
   }
   ret += sent;
   return ret;

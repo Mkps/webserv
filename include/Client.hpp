@@ -23,7 +23,7 @@ class Socket;
 
 #define BUFFER_SIZE 1024
 
-enum e_reqest_state { C_OFF, C_RECVH, C_RECV, C_REQ, C_CGI, C_RES };
+enum e_reqest_state { C_OFF, C_RECVH, C_RECV, C_REQ, C_CGI, C_RES, C_ERR};
 
 enum e_client_state { CLIENT_CONNECTED, CLIENT_DISCONNECTED };
 
@@ -55,7 +55,14 @@ public:
   int recvRequest();
   int emptySocket();
   int readChunk();
+
+  void handleRequest();
   void handleResponse();
+  void handleError();
+
+  void checkTimeout();
+  int  timeout();
+  void updateTime();
   void log(void) const;
 
 private:
@@ -65,6 +72,7 @@ private:
   Request _req;
   Response _res;
   size_t _id;
+  timeval_t _startTime;
   int _fd;
   int _state;
   std::string _uuid;

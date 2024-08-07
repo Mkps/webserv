@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
-#include "http_utils.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -236,7 +235,6 @@ int CgiHandler::timeout() {
 void CgiHandler::killCgi() {
   kill(_pid, SIGKILL);
   close(_pipefd[0]);
-  std::cerr << "KILLING CGI" << std::endl;
 }
 
 void CgiHandler::_execCGIPost() {

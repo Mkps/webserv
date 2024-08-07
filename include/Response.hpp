@@ -31,6 +31,7 @@ private:
   size_t _bytes_sent;
   size_t _offset;
   CgiHandler _cgi;
+  bool _headerSent;
 
 public:
   Response();
@@ -54,7 +55,8 @@ public:
   void setDefaultHeaders();
   void clear();
   std::string writeHeader();
-  void sendResponse(int clientSocket);
+  int sendHeader(int clientSocket);
+  int sendResponse(int clientSocket);
   std::string chunkResponse();
   int handleCGI(int clientSocket, std::string const &script,
                 std::string const &query);

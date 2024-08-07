@@ -31,10 +31,18 @@
 #include <unistd.h>
 #include <vector>
 
-Response::Response() { setDefaultHeaders(); }
+Response::Response() {
+  _offset = 0;
+  _bytes_sent = 0;
+  _headerSent = false;
+  setDefaultHeaders();
+}
 
 Response::Response(Request const &request) {
   (void)request;
+  _offset = 0;
+  _bytes_sent = 0;
+  _headerSent = false;
   setDefaultHeaders();
 }
 
@@ -115,7 +123,6 @@ void Response::processCgi(Request &req, Client &client) {
       client.setState(C_RES);
     } else {
       if (_cgi.timeout()) {
-        std::cout << "CGI TIMEOUT" << std::endl;
         _cgi.killCgi();
         _statusCode = 504;
         if (req.line().getMethod() == "GET")
@@ -203,8 +210,10 @@ void Response::processRequest(Request &req, Client &client) {
   } else {
     setBodyError(_statusCode, errPage(client, _statusCode));
   }
-  if (_cgi.isRunning())
+  if (_cgi.isRunning()){
     client.setState(C_CGI);
+    processCgi(req, client);
+  }
   else
     client.setState(C_RES);
 }
@@ -285,51 +294,94 @@ void Response::setDefaultHeaders() {
 }
 
 void Response::clear() {
+  _offset = 0;
+  _bytes_sent = 0;
   _cgi = CgiHandler();
   _responseHeaders.clear();
   _statusCode = 200;
+  _headerSent = false;
   setDefaultHeaders();
 }
 
 std::string Response::chunkResponse() {
-  const size_t chunk_size = 1024;
+  size_t chunk_size = 1024;
   std::string chunked_body;
 
   if (_offset < _body.size()) {
-    size_t len = std::min(chunk_size, _body.size() - _offset);
-    std::string chunk = _body.substr(_offset, len);
+    size_t len = std::min(chunk_size, (_body.size() - _offset));
+    chunked_body = _body.substr(_offset, len);
     _offset += len;
-    return chunk;
   } else {
     chunked_body = "0\r\n\r\n";
   }
   return chunked_body;
 }
 
-void Response::sendResponse(int clientSocket) {
+int Response::sendHeader(int clientSocket) {
+  setHeader("Transfer-Encoding", "chunked", true);
+  setHeader("Connection", "keep-alive", true);
+  if (_responseHeaders.find("Content-Length") != _responseHeaders.end())
+    _responseHeaders.erase("Content-Length");
+  if (sendStr(clientSocket, writeHeader()) <= 0)
+    return 0;
+  return 1;
+}
+inline std::string chunkStr(std::string const &chunk) {
+  std::string size = to_hex(chunk.size()) + "\r\n";
+  std::string body = chunk + "\r\n";
+  return size + body;
+}
+
+// Returns FAILURE on partial SUCCESS;
+int Response::sendResponse(int clientSocket) {
   std::ostringstream res;
-  _offset = 0;
-  _bytes_sent = 0;
   if (_body.size() > 1024 ||
       _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
-    setHeader("Transfer-Encoding", "chunked", true);
-    setHeader("Connection", "keep-alive", true);
-    res << writeHeader();
-    sendStr(clientSocket, res.str());
-    res.clear();
-    while (_offset < _body.size()) {
-      std::string chunk = chunkResponse();
-      int tmp = sendChunk(clientSocket, chunk);
-      _bytes_sent += tmp;
+    if (_headerSent == false) {
+      if (sendHeader(clientSocket))
+        _headerSent = true;
+      else
+        return 1;
     }
-    std::string chunk = chunkResponse();
-    sendStr(clientSocket, chunk);
+    static std::string chunk;
+    if (_offset < _body.size()) {
+      if (chunk.empty()) {
+        chunk = chunkStr(chunkResponse());
+      }
+      int tmp = sendStr(clientSocket, chunk);
+      if (tmp < 0) {
+        return 1;
+      } else if (tmp < static_cast<int>(chunk.size())) {
+        int missing = chunk.size() - tmp;
+        _offset -= missing;
+        chunk.substr(missing);
+        _bytes_sent += tmp;
+        return 1;
+      }
+      _bytes_sent += tmp;
+      chunk = "";
+      return 1;
+    } else {
+      std::string chunk = chunkResponse();
+      sendStr(clientSocket, chunk);
+      chunk = "";
+    }
   } else {
     res << writeHeader() << _body;
     if (DEBUG)
       std::cout << writeHeader() << _body << std::endl;
-    sendStr(clientSocket, res.str());
+    int tmp = sendStr(clientSocket, res.str());
+    if (tmp < 0) {
+      return 1;
+    } else if (tmp < static_cast<int>(res.str().size())) {
+      int missing = res.str().size() - tmp;
+      _offset -= missing;
+      res.str().substr(missing);
+      _bytes_sent += tmp;
+      return 1;
+    }
   }
+  return EXIT_SUCCESS;
 }
 
 CgiHandler Response::cgi() { return _cgi; }
