@@ -52,7 +52,7 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   }
   response._path = path;
   if ((req.line().getMethod() == "POST" && fileStatus(path) == FILE_DIR) ||
-      req.isCGI()) {
+      (req.isCGI() && fileStatus(path) == FILE_REG)) {
     if (!query_data.empty())
       path = path + query_data;
     response._path = std::string(path);
