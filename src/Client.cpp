@@ -162,7 +162,7 @@ int Client::recvRequest(void) {
       return (CLIENT_DISCONNECTED);
     }
     _state = C_RECVH;
-    if (_request.find("\r\n\r\n")) {
+    if (_request.find("\r\n\r\n") != _request.npos) {
       _state = C_RECV;
     }
   } else if (_state == C_RECV) {
@@ -221,8 +221,8 @@ int Client::recvRequest(void) {
 void Client::checkTimeout() {
   if (timeout()) {
     _state = C_RES;
-    _res.setStatusCode(500);
-    _res.setBodyError(500, errPage(*this, 500));
+    _res.setStatusCode(522);
+    _res.setBodyError(522, errPage(*this, 522));
   }
 }
 
@@ -279,7 +279,7 @@ void Client::handleError() {
 
 void Client::handleResponse() {
   if (_state == C_RES) {
-    if (emptySocket()) {
+    if (emptySocket() && _res.getStatusCode() < 400) {
       _res.setStatusCode(500);
       _res.setBodyError(500, errPage(*this, 500));
     }

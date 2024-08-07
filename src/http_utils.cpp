@@ -164,7 +164,7 @@ std::string getResponse(short status) {
     else if (status == 411)
       return "Length Required";
     else if (status == 414)
-      return "Request-URI Too Long";
+      return "URI Too Long";
     else
       return "Client Error";
   } else if (status >= 500 && status < 600) {
@@ -172,6 +172,8 @@ std::string getResponse(short status) {
       return "Bad Gateway";
     if (status == 504)
       return "Gateway Timeout";
+    if (status == 505)
+      return "HTTP Version Not Supported";
     return "Internal Server Error";
   } else
     return "Unidentified Error";
