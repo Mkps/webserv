@@ -66,6 +66,7 @@ void Request::setRequest(std::string const &request) {
 Request const &Request::getRequest() const { return *this; }
 
 RequestLine const &Request::line() const { return _requestLine; }
+
 std::string const &Request::body() const { return _body; }
 
 hashmap const &Request::headers() const { return _requestHeaders; }
@@ -108,6 +109,7 @@ void Request::trimBody() {
   if (pos != _body.npos)
     _body = _body.substr(0, pos);
 }
+
 void Request::unchunkRequest(void) {
 
   std::string tmp = "";
@@ -155,6 +157,7 @@ inline std::string getExt(std::string const &s) {
     return "";
   return tmp.substr(start + 1);
 }
+
 void Request::checkCGI(Client const &client) {
   std::vector<Location> loc = client.getConfig().get_locations();
   for (size_t i = 0; i < loc.size(); ++i) {
@@ -170,6 +173,7 @@ void Request::checkCGI(Client const &client) {
 }
 
 std::string Request::getCgiPath() const { return _cgiPath; }
+
 bool Request::isCGI() const { return _isCGI; }
 
 int Request::validateRequest(Client const &cli) const {
@@ -192,6 +196,7 @@ int Request::validateRequest(Client const &cli) const {
     return 413;
   return 0;
 }
+
 void Request::clear() {
   _requestHeaders.clear();
   _isCGI = false;
@@ -200,9 +205,7 @@ void Request::clear() {
   _cgiPath = "";
   _size = 0;
 }
-void Request::setSize(const size_t &size) {
-    _size = size;
-}
-size_t const &Request::size() const {
-    return _size;
-}
+
+void Request::setSize(const size_t &size) { _size = size; }
+
+size_t const &Request::size() const { return _size; }

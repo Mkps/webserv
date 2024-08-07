@@ -172,21 +172,21 @@ int Server::_handleNewConnection(void) {
 
 void Server::_handleEventIn(Client &client, int const &i) {
   int ret = 0;
-      if (client.getState() >= C_OFF && client.getState() <= C_RECV) {
-        ret = _handleClientRequest(&client);
-        if (ret == CLIENT_DISCONNECTED)
-          return ;
-        client.setState(C_REQ);
-      }
-      if (client.getRequest().empty() && client.getState() == C_REQ) {
-        client.setState(C_OFF);
-        return ;
-      }
-      if (client.getState() >= C_RECVH && client.getState() <= C_RECV) {
-        return ;
-      }
-      client.handleRequest();
-      _pollfds[i].events = POLLIN | POLLOUT;
+  if (client.getState() >= C_OFF && client.getState() <= C_RECV) {
+    ret = _handleClientRequest(&client);
+    if (ret == CLIENT_DISCONNECTED)
+      return;
+    client.setState(C_REQ);
+  }
+  if (client.getRequest().empty() && client.getState() == C_REQ) {
+    client.setState(C_OFF);
+    return;
+  }
+  if (client.getState() >= C_RECVH && client.getState() <= C_RECV) {
+    return;
+  }
+  client.handleRequest();
+  _pollfds[i].events = POLLIN | POLLOUT;
 }
 
 int Server::_handleClientsEvent(void) {
@@ -223,6 +223,7 @@ int Server::_handleClientsEvent(void) {
       Client *client = static_cast<Client *>(ptr);
       if (client->getState() == C_RES) {
         client->handleError();
+        _pollfds[i].events = POLLIN;
       }
     }
   }
@@ -251,9 +252,8 @@ int Server::_handleTimeout() {
     int state = _clients[i]->getState();
     if (state == C_CGI) {
       _clients[i]->checkCgi();
-    }
-    else if (state > C_OFF && state < C_RES) {
-        _clients[i]->checkTimeout();
+    } else if (state > C_OFF && state < C_RES) {
+      _clients[i]->checkTimeout();
     }
   }
   return 0;
@@ -262,11 +262,12 @@ int Server::_handleTimeout() {
 int Server::_handleSend() {
   for (size_t i = 0; i < _clients.size(); ++i) {
     int state = _clients[i]->getState();
-    if (state == C_RECV) {
-      _handleClientRequest(_clients[i]);
-    } else if (state == C_REQ) {
-        _handleEventIn(*_clients[i], i);
-    }
+    // Unneeded?
+    /*if (state == C_RECV) {*/
+    /*  _handleClientRequest(_clients[i]);*/
+    /*} else if (state == C_REQ) {*/
+    /*  _handleEventIn(*_clients[i], i);*/
+    /*}*/
     if (state == C_RES) {
       _clients[i]->handleResponse();
     }
