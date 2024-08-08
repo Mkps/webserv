@@ -11,7 +11,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(event)
     var formData = new FormData();
     formData.append('file', file);
 
-    fetch('http://localhost:8080/upload', {
+    fetch('http://localhost:8080/upload/', {
         method: 'POST',
         body: formData
     })

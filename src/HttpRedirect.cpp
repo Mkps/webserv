@@ -27,6 +27,29 @@ HttpRedirect &HttpRedirect::operator=(HttpRedirect const &rhs) {
   return *this;
 }
 
+int HttpRedirect::handleFolder(Request const &req, Response &response,
+                               Configuration const &conf) {
+  std::string root = conf.get_value("root")[0];
+  if (root.empty())
+    root = ".";
+  if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')
+    root = root.substr(0, root.size() - 1);
+  std::string path = req.getFilePath();
+  size_t pos = path.find_first_of("?");
+  std::string query_data;
+  if (pos != path.npos) {
+    query_data = path.substr(pos);
+    path = path.substr(0, pos);
+  }
+  if (fileStatus(root + path) == FILE_DIR && *path.rbegin() != '/' &&
+      query_data.empty()) {
+    response._statusCode = 301;
+    response.setHeader("Location", req.getAbsPath() + "/", true);
+    return 1;
+  }
+  return 0;
+}
+
 void HttpRedirect::handleRedirect(Request const &req, Response &response,
                                   Configuration const &conf) {
   std::string root = conf.get_value("root")[0];

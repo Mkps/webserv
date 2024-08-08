@@ -113,7 +113,7 @@ inline std::string extractFileName(const std::string &part) {
 
 inline std::string extractContent(const std::string &part) {
   size_t headerEnd = part.find("\r\n\r\n");
-  if (headerEnd != std::string::npos) {
+  if (headerEnd != std::string::npos && part.find("name=\"file\"") != std::string::npos) {
     return part.substr(headerEnd + 4);
   }
   return "";
