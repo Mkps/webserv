@@ -68,42 +68,46 @@ std::string const &RequestLine::getHttpVersion() const { return _httpVersion; }
 
 void RequestLine::setHttpVersion(std::string &ver) { _httpVersion = ver; }
 
-bool RequestLine::isVersionValid() const {
-  if (_httpVersion != "HTTP/1.0" && _httpVersion != "HTTP/1.1")
-    return false;
-  return true;
+int RequestLine::isVersionValid() const {
+  if (_httpVersion == "HTTP/0.9" || _httpVersion == "HTTP/1.0" ||
+      _httpVersion == "HTTP/1.1")
+    return 0;
+  else if (_httpVersion == "HTTP/2" || _httpVersion == "HTTP/3")
+    return 522;
+  return 400;
 }
 
 inline bool validUriChar(char *c) {
-  if (isalnum(*c) || *c == '-' || *c == '.' || *c == '_' || *c == '~' || *c == '/'
-          || *c == '=' || *c == '?' || *c == '&')
+  if (isalnum(*c) || *c == '-' || *c == '.' || *c == '_' || *c == '~' ||
+      *c == '/' || *c == '=' || *c == '?' || *c == '&')
     return true;
   if (*c == '%' && isdigit(*(c + 1)) && isdigit(*(c + 2))) {
-      return true;
+    return true;
   }
   return false;
 }
 
 bool RequestLine::isURIValid() const {
   for (size_t i = 0; i < _requestUri.size(); ++i) {
-      if (!validUriChar((char *)_requestUri.c_str() + i))
-              return false;
+    if (!validUriChar((char *)_requestUri.c_str() + i))
+      return false;
   }
   return true;
 }
 
 bool RequestLine::isRLValid() const {
-	std::vector<std::string> validMethod;
-	validMethod.push_back("GET");
-	validMethod.push_back("POST");
-	validMethod.push_back("DELETE");
-	validMethod.push_back("PUT");
-	validMethod.push_back("HEAD");
-	validMethod.push_back("TRACE");
-	validMethod.push_back("OPTIONS");
-	if (std::find(validMethod.begin(), validMethod.end(), _method) == validMethod.end())
-		return -1;
-	if (_httpVersion != "HTTP/1.0" && _httpVersion != "HTTP/1.1")
-		return -2;
-	return 0;
+  std::vector<std::string> validMethod;
+  validMethod.push_back("GET");
+  validMethod.push_back("POST");
+  validMethod.push_back("DELETE");
+  validMethod.push_back("PUT");
+  validMethod.push_back("HEAD");
+  validMethod.push_back("TRACE");
+  validMethod.push_back("OPTIONS");
+  if (std::find(validMethod.begin(), validMethod.end(), _method) ==
+      validMethod.end())
+    return -1;
+  if (_httpVersion != "HTTP/1.0" && _httpVersion != "HTTP/1.1")
+    return -2;
+  return 0;
 }
