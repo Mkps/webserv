@@ -350,14 +350,10 @@ int Response::sendResponse(int clientSocket) {
   std::ostringstream res;
   if (_body.size() > 1024 ||
       _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
-    if (_headerSent == false) {
-      if (sendHeader(clientSocket))
-        _headerSent = true;
-      else
-        return 1;
-    }
     static std::string chunk;
-    if (_offset < _body.size()) {
+    res << writeHeader() << _body;
+    std::string resStr = res.str();
+    if (_offset < resStr.size()) {
       if (chunk.empty()) {
         chunk = chunkStr(chunkResponse());
       }
