@@ -255,12 +255,12 @@ void CgiHandler::_execCGIPost() {
     script_array[1] = NULL;
   }
   script_array[2] = NULL;
-  std::cerr << "POST EXEC" << std::endl;
   execve(cmd.c_str(), script_array, _envv);
   delete[] script_array[0];
   if (cmd != _script)
     delete[] script_array[1];
   _err = 1;
+  std::cerr << "POST EXEC" << std::endl;
   throw std::runtime_error("500 execve error");
 }
 

@@ -317,7 +317,7 @@ void Response::clear() {
 }
 
 std::string Response::chunkResponse() {
-  size_t chunk_size = 1024;
+  size_t chunk_size = 4096;
   std::string chunked_body;
 
   if (_offset < _body.size()) {
@@ -348,7 +348,7 @@ inline std::string chunkStr(std::string const &chunk) {
 // Returns FAILURE on partial SUCCESS;
 int Response::sendResponse(int clientSocket) {
   std::ostringstream res;
-  if (_body.size() > 1024 ||
+  if (_body.size() > 4096 ||
       _responseHeaders.find("Content-Length") == _responseHeaders.end()) {
     if (_headerSent == false) {
       if (sendHeader(clientSocket))
@@ -357,6 +357,8 @@ int Response::sendResponse(int clientSocket) {
         return 1;
     }
     static std::string chunk;
+    /* logItem("header ", writeHeader()); */
+    /* logItem("remaining ", _body.size() - _offset); */
     if (_offset < _body.size()) {
       if (chunk.empty()) {
         chunk = chunkStr(chunkResponse());

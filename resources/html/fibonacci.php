@@ -29,14 +29,14 @@ if ($method === 'POST') {
     if ($number !== null && $number >= 0) {
         echo "<h2>Fibonacci number at position " . htmlspecialchars($number) . "</h2>";
         $result = fibonacci($number);
-        echo "Result is: $result";
+        echo "<p>Result is: $result<p>";
     } else {
         http_response_code(400);
-        echo 'Please provide a valid integer';
+        echo '<p><strong>Please provide a valid integer</strong></p>';
     }
 } else {
     http_response_code(405);
-    echo "Unsupported request method";
+    echo "<p><strong>Unsupported request method</strong></p>";
 }
 
 echo "</body>\n";

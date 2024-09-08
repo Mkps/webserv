@@ -363,7 +363,7 @@ body {
 }
 
 .result {
- display: flex;
+ display: block;
  border-radius: 10px;
  font-size: 0.8em;
  font-family: Helvetica, Arial, sans-serif;
@@ -373,7 +373,6 @@ body {
  padding-left: 50px;
  padding-right: 50px;
  margin-left:15%;
-
 }
 .result:empty {
   display: none;
