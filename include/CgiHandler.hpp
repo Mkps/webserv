@@ -11,14 +11,14 @@
 /* ************************************************************************** */
 
 #ifndef CGI_HANDLER_HPP
-#define CGI_HANDLER_HPP
+# define CGI_HANDLER_HPP
 
-#include <map>
-#include <string>
-#include <sys/time.h>
-#include <sys/types.h>
+# include <map>
+# include <string>
+# include <sys/time.h>
+# include <sys/types.h>
 
-#define CGI_TIMEOUT 3
+# define CGI_TIMEOUT 3
 
 typedef std::map<std::string, std::string> hashmap;
 typedef struct timeval timeval_t;
@@ -71,5 +71,7 @@ public:
   int timeout();
   void killCgi();
 };
+
 char **hashmapToChrArray(hashmap const &map);
+
 #endif

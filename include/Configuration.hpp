@@ -13,7 +13,7 @@
 #ifndef CONFIGURATION_HPP
 # define CONFIGURATION_HPP
 
-#include "Location.hpp"
+# include "Location.hpp"
 
 /// @brief Contient les configurations pour chaque serveur.
 /// comment en parsant le fichier parse config et stockan les information des des map.

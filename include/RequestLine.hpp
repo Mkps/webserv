@@ -11,7 +11,7 @@
 /* ************************************************************************** */
 
 #ifndef REQUESTLINE_HPP
-#define REQUESTLINE_HPP
+# define REQUESTLINE_HPP
 #include <string>
 
 class RequestLine {
@@ -38,4 +38,5 @@ public:
   bool isURIValid() const;
   bool isRLValid() const;
 };
+
 #endif

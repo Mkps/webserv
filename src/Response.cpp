@@ -287,6 +287,8 @@ std::string Response::findContentType() {
     return "image/png";
   else if (type == "gif")
     return "image/gif";
+  else if (type == "svg")
+    return "image/svg+xml";
   else if (type == "webp")
     return "image/webp";
   else if (type == "bmp")
