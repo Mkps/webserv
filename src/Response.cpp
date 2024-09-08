@@ -162,11 +162,16 @@ void Response::makeAutoindex(Request const &req, Client &client) {
       setHeader("Content-Length", sizeToStr(_body.size()), true);
       setHeader("Content-Type", "text/html", true);
     } catch (HttpAutoindex::FolderRedirect const &e) {
-      _statusCode = 301;
-      _body = "";
-      _responseHeaders.clear();
-      setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
-                true);
+      size_t pos = _path.find_first_of("/");
+      if (pos != _path.npos) {
+        setBodyError(403, errPage(client, 403));
+      } else {
+        _statusCode = 301;
+        _body = "";
+        _responseHeaders.clear();
+        setHeader("Location", HttpAutoindex::rewriteLocation(req.getAbsPath()),
+                  true);
+      }
 
     } catch (HttpAutoindex::NoPathException const &e) {
       setBodyError(404, errPage(client, 404));
@@ -177,6 +182,12 @@ void Response::makeAutoindex(Request const &req, Client &client) {
 
 void Response::processRequest(Request &req, Client &client) {
   Configuration conf(client.getConfig());
+
+  if (HttpRedirect::handleFolder(req, *this, conf)) {
+    setBodyError(_statusCode, errPage(client, _statusCode));
+    client.setState(C_RES);
+    return;
+  }
   int requestStatus = req.validateRequest(client);
   if (requestStatus) {
     setBodyError(requestStatus, errPage(client, requestStatus));
@@ -210,11 +221,10 @@ void Response::processRequest(Request &req, Client &client) {
   } else {
     setBodyError(_statusCode, errPage(client, _statusCode));
   }
-  if (_cgi.isRunning()){
+  if (_cgi.isRunning()) {
     client.setState(C_CGI);
     processCgi(req, client);
-  }
-  else
+  } else
     client.setState(C_RES);
 }
 
@@ -277,6 +287,8 @@ std::string Response::findContentType() {
     return "image/png";
   else if (type == "gif")
     return "image/gif";
+  else if (type == "svg")
+    return "image/svg+xml";
   else if (type == "webp")
     return "image/webp";
   else if (type == "bmp")
@@ -300,6 +312,7 @@ void Response::clear() {
   _responseHeaders.clear();
   _statusCode = 200;
   _headerSent = false;
+  _body = "";
   setDefaultHeaders();
 }
 

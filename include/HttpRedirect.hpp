@@ -26,6 +26,7 @@ public:
   HttpRedirect(HttpRedirect const &src);
   HttpRedirect &operator=(HttpRedirect const &rhs);
   static void handleRedirect(Request const &req, Response &response, Configuration const &conf);
+  static int handleFolder(Request const &req, Response &response, Configuration const &conf);
   bool isRedirect();
   std::string const &location();
 

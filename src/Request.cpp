@@ -180,8 +180,9 @@ int Request::validateRequest(Client const &cli) const {
   std::string method = _requestLine.getMethod();
   if (!cli.getConfig().is_a_legit_Method(method))
     return logError("Not a legit method", 400);
-  if (!_requestLine.isVersionValid())
-    return logError("Invalid http version", 400);
+  int err = _requestLine.isVersionValid();
+  if (err)
+    return logError("Invalid http version", err);
   if (_requestLine.getRequestUri().size() > 4096)
     return logError("uri too long", 414);
   if (!_requestLine.isURIValid())
