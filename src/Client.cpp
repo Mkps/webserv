@@ -6,7 +6,7 @@
 /*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/01 18:44:22 by aloubier          #+#    #+#             */
-/*   Updated: 2024/08/01 18:44:22 by aloubier         ###   ########.fr       */
+/*   Updated: 2024/09/19 20:41:10 by aloubier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ Client::Client(Socket *socket, size_t id, Configuration config)
     : _socket(socket), _id(id), _config(config) {
   struct sockaddr addr;
   socklen_t addr_len = sizeof(addr);
-
+  _state = C_OFF;
   bzero(&addr, addr_len);
   _fd = accept(socket->getFd(), &addr, &addr_len);
   if (_fd == -1) {

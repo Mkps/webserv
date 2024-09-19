@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: yzaoui <yzaoui@student.42.fr>              +#+  +:+       +#+        */
+/*   By: aloubier <aloubier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/21 15:15:23 by obouhlel          #+#    #+#             */
-/*   Updated: 2024/07/05 18:31:57 by yzaoui           ###   ########.fr       */
+/*   Updated: 2024/09/19 20:57:29 by aloubier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -200,7 +200,10 @@ int Server::_handleClientsEvent(void) {
         return (EXIT_FAILURE);
       }
       Client *client = static_cast<Client *>(ptr);
+ 	  if (!client)
+	  	return (EXIT_FAILURE);
       _handleEventIn(*client, i);
+	  return EXIT_SUCCESS;
     }
     if (_pollfds[i].revents & POLLOUT) {
       ptr = _clients[i - _sockets.size()];
@@ -209,10 +212,14 @@ int Server::_handleClientsEvent(void) {
         return (EXIT_FAILURE);
       }
       Client *client = static_cast<Client *>(ptr);
+	  if (!client)
+	  	return (EXIT_FAILURE);
       if (client->getState() == C_RES)
         client->handleResponse();
       else if (client->getState() == C_OFF)
         _pollfds[i].events = POLLIN;
+  	  return EXIT_SUCCESS;
+
     }
     if (_pollfds[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
       ptr = _clients[i - _sockets.size()];
@@ -221,10 +228,13 @@ int Server::_handleClientsEvent(void) {
         return (EXIT_FAILURE);
       }
       Client *client = static_cast<Client *>(ptr);
+	  if (!client)
+	  	return (EXIT_FAILURE);
       if (client->getState() == C_RES) {
         client->handleError();
         _pollfds[i].events = POLLIN;
       }
+  	  return EXIT_SUCCESS;
     }
   }
   return (EXIT_SUCCESS);
