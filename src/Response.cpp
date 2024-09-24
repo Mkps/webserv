@@ -137,6 +137,7 @@ void Response::processCgi(Request &req, Client &client) {
 
 bool Response::isAutoindex(Request const &req, Configuration const &conf) {
   std::vector<std::string> autoindex;
+  //logItem("sc", _statusCode);
   if (_statusCode != 403)
     return false;
   std::vector<Location> l = conf.get_locations_by_path(req.getFilePath());

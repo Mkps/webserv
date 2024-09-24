@@ -53,7 +53,6 @@ int HttpRedirect::handleFolder(Request const &req, Response &response,
 void HttpRedirect::handleRedirect(Request const &req, Response &response,
                                   Configuration const &conf) {
   std::string root = conf.get_value_by_path("root", req.getFilePath())[0];
-  logItem("root", root);
   if (root.empty())
     root = ".";
   if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')
@@ -69,7 +68,8 @@ void HttpRedirect::handleRedirect(Request const &req, Response &response,
   std::string redir = conf.get_redirect(req.getFilePath());
   if (!redir.empty()) {
     response._statusCode = 302;
-    if (redir.find("http://") == redir.npos)
+    if (redir.find("http://") == redir.npos
+            || redir.find("https://") == redir.npos)
       redir = "http://" + redir;
     response.setHeader("Location", redir, true);
     return;
