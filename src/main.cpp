@@ -37,7 +37,6 @@ bool isFile(const std::string &path) {
 // verifier que chaque configuration on un listen different
 void  verif_same_listen(std::vector<Configuration> tab)
 {
-  return;
   std::vector<std::string> all_listen_of_each_conf;
   for (std::vector<Configuration>::iterator it = tab.begin(); it != tab.end(); it++)
   {
