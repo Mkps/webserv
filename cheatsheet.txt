@@ -1,0 +1,4 @@
+curl -v --resolve example42.fr:8080:127.0.0.1 http://example42.fr:8080
+curl -v --resolve example42.com:8080:127.0.0.1 http://example42.com:8080
+curl -v 127.0.0.1:8080
+
