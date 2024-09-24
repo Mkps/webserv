@@ -229,6 +229,7 @@ void Response::processRequest(Request &req, Client &client) {
     client.setState(C_RES);
 }
 
+static std::string getMIME(std::string const &type);
 void Response::setBodyError(int status, std::string error_page) {
   if (error_page.empty()) {
     std::ostringstream s;
@@ -239,7 +240,14 @@ void Response::setBodyError(int status, std::string error_page) {
       << "<hr>\n<center>webserv/1.0.2</center>" << "</body>\n</html>";
     _body = s.str();
   } else {
-    setBody(error_page);
+    size_t pos;
+    pos = error_page.find_last_of(".");
+    std::string type = error_page.substr(pos + 1);
+    if (getMIME(type) == "text/html") {
+        setBody(error_page);
+    }
+    else
+        setBodyError(status, "");
   }
   setHeader("Content-Length", sizeToStr(_body.size()), true);
   setHeader("Content-Type", "text/html", true);
@@ -272,10 +280,7 @@ std::string Response::writeHeader() {
   return s.str();
 }
 
-std::string Response::findContentType() {
-  size_t pos;
-  pos = _path.find_last_of(".");
-  std::string type = _path.substr(pos + 1);
+static std::string getMIME(std::string const &type) {
   if (type == "html")
     return "text/html";
   else if (type == "css")
@@ -295,6 +300,13 @@ std::string Response::findContentType() {
   else if (type == "bmp")
     return "image/bmp";
   return "text/plain";
+}
+
+std::string Response::findContentType() {
+  size_t pos;
+  pos = _path.find_last_of(".");
+  std::string type = _path.substr(pos + 1);
+  return getMIME(type);
 }
 
 void Response::setDefaultHeaders() {
