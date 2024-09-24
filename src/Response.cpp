@@ -236,7 +236,7 @@ void Response::setBodyError(int status, std::string error_page) {
     s << "<!DOCTYPE html>\n<html>\n<head>\n<title>" << _statusCode << " "
       << getResponse(_statusCode) << "</title>\n</head>\n<body>\n<center>\n<h1>"
       << _statusCode << " " << getResponse(_statusCode) << "</h1>\n</center>\n"
-      << "<hr>\n<center>webserv/0.1</center>" << "</body>\n</html>";
+      << "<hr>\n<center>webserv/1.0.2</center>" << "</body>\n</html>";
     _body = s.str();
   } else {
     setBody(error_page);
@@ -303,7 +303,7 @@ void Response::setDefaultHeaders() {
   setHeader("Content-Type", "text/plain", true);
   setHeader("Connection", "keep-alive", true);
   setHeader("Charset", "UTF-8", true);
-  setHeader("Server", "webserv/0.1", true);
+  setHeader("Server", "webserv/1.0.2", true);
 }
 
 void Response::clear() {
