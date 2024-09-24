@@ -355,10 +355,9 @@ int Response::sendResponse(int clientSocket) {
         _headerSent = true;
       else
         return 1;
+     // logItem("header ", writeHeader());
     }
     static std::string chunk;
-    /* logItem("header ", writeHeader()); */
-    /* logItem("remaining ", _body.size() - _offset); */
     if (_offset < _body.size()) {
       if (chunk.empty()) {
         chunk = chunkStr(chunkResponse());

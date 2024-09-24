@@ -19,7 +19,12 @@
 
 Request::~Request() {}
 
-Request::Request() {}
+Request::Request() {
+  _isCGI = false;
+  _cgiIndex = -1;
+  _cgiPath = "";
+  _size = 0;
+}
 
 Request::Request(std::string const &request) : _requestLine(request) {
   fetchData(request);

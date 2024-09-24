@@ -186,6 +186,7 @@ void Server::_handleEventIn(Client &client, int const &i) {
     return;
   }
   client.handleRequest();
+  //logItem("req", client.getRequest());
   _pollfds[i].events = POLLIN | POLLOUT;
 }
 
@@ -230,7 +231,7 @@ int Server::_handleClientsEvent(void) {
       Client *client = static_cast<Client *>(ptr);
 	  if (!client)
 	  	return (EXIT_FAILURE);
-      if (client->getState() == C_RES) {
+      if (client->getState() >= C_OFF) {
         client->handleError();
         _pollfds[i].events = POLLIN;
       }
