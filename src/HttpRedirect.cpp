@@ -52,7 +52,8 @@ int HttpRedirect::handleFolder(Request const &req, Response &response,
 
 void HttpRedirect::handleRedirect(Request const &req, Response &response,
                                   Configuration const &conf) {
-  std::string root = conf.get_value("root")[0];
+  std::string root = conf.get_value_by_path("root", req.getFilePath())[0];
+  logItem("root", root);
   if (root.empty())
     root = ".";
   if (*root.rbegin() == '/' && *req.getFilePath().begin() == '/')

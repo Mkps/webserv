@@ -313,7 +313,7 @@ void Client::setConfig(std::vector<Configuration> const &conf) {
   }
   Configuration const *first = NULL;
   for (size_t i = 0; i < conf.size(); ++i) {
-    if (conf[i].get_value("host")[0] == this->_socket->getIp() &&
+    if (!conf[i].get_value("host").empty() && conf[i].get_value("host")[0] == this->_socket->getIp() &&
         strtod(conf[i].get_value("listen")[0].c_str(), NULL) ==
             this->_socket->getPort()) {
       if (!first) {

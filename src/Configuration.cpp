@@ -40,9 +40,9 @@ static void verifFileConfig(std::string file_config) {
     throw std::runtime_error("Le fichier n'a pas d'extension: " + file_config);
 
   std::string extension = file_config.substr(dot_pos);
-  if (extension != ".con" && extension != ".config")
+  if (extension != ".conf" && extension != ".config")
     throw std::runtime_error(
-        "Le fichier doit avoir une extension .con ou .config: " + file_config);
+        "Le fichier doit avoir une extension .conf ou .config: " + file_config);
 }
 
 void Configuration::_add_location(std::string str) {
@@ -128,11 +128,20 @@ size_t Configuration::get_id(void) const { return (this->_id); }
 std::vector<std::string> Configuration::get_value(std::string key) const {
   std::map<std::string, std::vector<std::string> >::const_iterator it =
       this->_param.find(key);
-
   if (it != _param.end())
     return it->second;
   else
     return std::vector<std::string>();
+}
+
+std::vector<std::string> Configuration::get_value_by_path(std::string key, std::string path) const {
+  std::vector<std::string> all_res;
+  std::vector<Location> l = get_locations_by_path(path);
+  if (!l.empty())
+    all_res = l[0].get_value(key);
+  if (all_res.empty())
+    all_res = this->get_value(key);
+  return all_res;
 }
 
 std::vector<std::string> Configuration::get_all_key(void) {

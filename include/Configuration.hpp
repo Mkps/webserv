@@ -34,6 +34,7 @@ public:
 ////////////////////////////////////////
 	size_t						get_id(void) const;
 	std::vector<std::string>	get_value(std::string key) const;
+	std::vector<std::string>	get_value_by_path(std::string key, std::string path) const;
 	std::vector<std::string>	get_all_key(void);
 	std::vector<Location>		get_locations(void) const;
 	std::vector<Location>		get_locations_by_path(std::string path) const;
